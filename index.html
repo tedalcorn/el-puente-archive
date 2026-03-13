@@ -303,7 +303,7 @@
 
 <header>
   <h1>EL PUENTE DE GALISTEO</h1>
-  <p>Community newsletter archive, 1997&ndash;2024</p>
+  <p>Community newsletter archive, 1997&ndash;2026</p>
 </header>
 
 <nav id="nav">
@@ -331,6 +331,9 @@ let DATA = { articles: [], issues: [], people: {}, topics: {}, trends: {} };
 let currentView = 'search';
 let searchQuery = '';
 let filterType = 'all';
+let hideBoilerplate = true; // hide classifieds, sponsors, mastheads by default
+
+const BOILERPLATE_TYPES = new Set(['classified', 'sponsor', 'masthead']);
 
 async function loadData() {
   try {
@@ -399,23 +402,33 @@ function renderSearch(container, prefill = '') {
         <option value="fire_dept">Fire Dept</option>
         <option value="church_news">Church News</option>
         <option value="letter">Letters</option>
+        <option value="classified">Classifieds</option>
       </select>
+    </div>
+    <div style="margin-bottom:1rem">
+      <label style="font-size:0.9rem;cursor:pointer;color:var(--earth)">
+        <input type="checkbox" id="hide-boilerplate" ${hideBoilerplate ? 'checked' : ''}>
+        Hide classifieds, sponsors &amp; mastheads
+      </label>
     </div>
     <div id="results"></div>
   `;
 
   const input = document.getElementById('search-input');
   const filter = document.getElementById('filter-type');
+  const boilerplateToggle = document.getElementById('hide-boilerplate');
   filter.value = filterType;
 
   const doSearch = () => {
     searchQuery = input.value;
     filterType = filter.value;
+    hideBoilerplate = boilerplateToggle.checked;
     performSearch(searchQuery, filterType);
   };
 
   input.addEventListener('input', debounce(doSearch, 300));
   filter.addEventListener('change', doSearch);
+  boilerplateToggle.addEventListener('change', doSearch);
 
   if (prefill || searchQuery) doSearch();
 }
@@ -423,6 +436,10 @@ function renderSearch(container, prefill = '') {
 function performSearch(query, type) {
   const results = document.getElementById('results');
   let matches = DATA.articles;
+
+  if (hideBoilerplate && type === 'all') {
+    matches = matches.filter(a => !BOILERPLATE_TYPES.has(a.section_type));
+  }
 
   if (type !== 'all') {
     matches = matches.filter(a => a.section_type === type);
@@ -491,26 +508,56 @@ function toggleBody(id) {
 
 // ---- People view ----
 function renderPeople(container) {
-  const sorted = Object.entries(DATA.people).sort((a, b) => b[1].count - a[1].count);
+  // Recount people excluding boilerplate if toggle is on
+  let peopleCounts;
+  if (hideBoilerplate) {
+    peopleCounts = {};
+    DATA.articles.forEach(a => {
+      if (BOILERPLATE_TYPES.has(a.section_type)) return;
+      a.people.forEach(p => {
+        peopleCounts[p] = (peopleCounts[p] || 0) + 1;
+      });
+    });
+  } else {
+    peopleCounts = {};
+    Object.entries(DATA.people).forEach(([name, data]) => {
+      peopleCounts[name] = data.count;
+    });
+  }
+
+  const sorted = Object.entries(peopleCounts).sort((a, b) => b[1] - a[1]);
+
   container.innerHTML = `
     <div class="search-bar">
       <input type="text" id="people-filter" placeholder="Filter people...">
+    </div>
+    <div style="margin-bottom:1rem">
+      <label style="font-size:0.9rem;cursor:pointer;color:var(--earth)">
+        <input type="checkbox" id="people-hide-boilerplate" ${hideBoilerplate ? 'checked' : ''}>
+        Hide classifieds, sponsors &amp; mastheads
+      </label>
     </div>
     <div class="people-grid" id="people-grid"></div>
   `;
 
   const grid = document.getElementById('people-grid');
   const input = document.getElementById('people-filter');
+  const toggle = document.getElementById('people-hide-boilerplate');
+
+  toggle.addEventListener('change', () => {
+    hideBoilerplate = toggle.checked;
+    renderPeople(container);
+  });
 
   function render(filter = '') {
     const filtered = filter
       ? sorted.filter(([name]) => name.toLowerCase().includes(filter.toLowerCase()))
       : sorted;
     grid.innerHTML = '';
-    filtered.slice(0, 200).forEach(([name, data]) => {
+    filtered.slice(0, 200).forEach(([name, count]) => {
       const card = document.createElement('div');
       card.className = 'person-card';
-      card.innerHTML = `<div class="name">${escapeHtml(name)}</div><div class="count">${data.count} mention${data.count !== 1 ? 's' : ''}</div>`;
+      card.innerHTML = `<div class="name">${escapeHtml(name)}</div><div class="count">${count} mention${count !== 1 ? 's' : ''}</div>`;
       card.onclick = () => searchPerson(name);
       grid.appendChild(card);
     });
