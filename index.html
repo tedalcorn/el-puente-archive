@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El Puente de Galisteo — Archive Index</title>
+<style>
+  :root {
+    --sand: #f5f0e8;
+    --earth: #8b7355;
+    --clay: #c4956a;
+    --sky: #6b9ac4;
+    --ink: #2c2416;
+    --sage: #7a8b6f;
+    --paper: #faf8f3;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    background: var(--sand);
+    color: var(--ink);
+    line-height: 1.6;
+  }
+
+  header {
+    background: var(--ink);
+    color: var(--sand);
+    padding: 1.5rem 2rem;
+    text-align: center;
+  }
+
+  header h1 {
+    font-size: 2rem;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+  }
+
+  header p {
+    font-style: italic;
+    opacity: 0.8;
+    font-size: 0.95rem;
+  }
+
+  nav {
+    background: var(--earth);
+    display: flex;
+    gap: 0;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  nav button {
+    background: none;
+    border: none;
+    color: var(--sand);
+    padding: 0.75rem 1.5rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  nav button:hover { background: rgba(255,255,255,0.1); }
+  nav button.active { background: rgba(255,255,255,0.2); font-weight: bold; }
+
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1.5rem;
+  }
+
+  .search-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .search-bar input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    font-family: inherit;
+    border: 2px solid var(--earth);
+    border-radius: 4px;
+    background: var(--paper);
+  }
+
+  .search-bar input:focus {
+    outline: none;
+    border-color: var(--sky);
+  }
+
+  .search-bar select {
+    padding: 0.75rem;
+    font-family: inherit;
+    border: 2px solid var(--earth);
+    border-radius: 4px;
+    background: var(--paper);
+  }
+
+  /* View: Search results / articles */
+  .article-card {
+    background: var(--paper);
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    transition: box-shadow 0.2s;
+  }
+
+  .article-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+
+  .article-card .meta {
+    font-size: 0.85rem;
+    color: var(--earth);
+    margin-bottom: 0.5rem;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .article-card .meta .issue-link {
+    color: var(--sky);
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  .article-card h3 {
+    font-size: 1.15rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .article-card .body-preview {
+    font-size: 0.9rem;
+    color: #555;
+    max-height: 4.5em;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .article-card .body-preview.expanded {
+    max-height: none;
+  }
+
+  .article-card .toggle-body {
+    font-size: 0.85rem;
+    color: var(--sky);
+    cursor: pointer;
+    margin-top: 0.25rem;
+    display: inline-block;
+  }
+
+  .tag {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.78rem;
+    margin: 0.1rem;
+    cursor: pointer;
+  }
+
+  .tag-section {
+    background: var(--clay);
+    color: white;
+  }
+
+  .tag-person {
+    background: var(--sky);
+    color: white;
+  }
+
+  .tag-topic {
+    background: var(--sage);
+    color: white;
+  }
+
+  /* View: People */
+  .people-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .person-card {
+    background: var(--paper);
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+  }
+
+  .person-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  .person-card .name { font-weight: bold; }
+  .person-card .count { color: var(--earth); font-size: 0.85rem; }
+
+  /* View: Topics */
+  .topics-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+  }
+
+  .topic-chip {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    background: var(--sage);
+    color: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: transform 0.2s;
+  }
+
+  .topic-chip:hover { transform: scale(1.05); }
+
+  /* View: Trends */
+  #trends-container {
+    background: var(--paper);
+    border-radius: 6px;
+    padding: 1.5rem;
+    border: 1px solid #ddd;
+  }
+
+  .trend-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .trend-controls button {
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--earth);
+    border-radius: 15px;
+    background: var(--paper);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-family: inherit;
+  }
+
+  .trend-controls button.selected {
+    background: var(--sage);
+    color: white;
+    border-color: var(--sage);
+  }
+
+  canvas { width: 100% !important; }
+
+  .stats-bar {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    padding: 1rem;
+    font-size: 0.9rem;
+    color: var(--earth);
+    flex-wrap: wrap;
+  }
+
+  .stats-bar span { font-weight: bold; color: var(--ink); }
+
+  .result-count {
+    font-size: 0.9rem;
+    color: var(--earth);
+    margin-bottom: 1rem;
+  }
+
+  .highlight {
+    background: #fff3cd;
+    padding: 0 2px;
+    border-radius: 2px;
+  }
+
+  .loading {
+    text-align: center;
+    padding: 3rem;
+    color: var(--earth);
+    font-style: italic;
+  }
+
+  footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--earth);
+    font-size: 0.85rem;
+    border-top: 1px solid #ddd;
+    margin-top: 2rem;
+  }
+
+  @media (max-width: 600px) {
+    header h1 { font-size: 1.4rem; }
+    nav button { padding: 0.6rem 1rem; font-size: 0.85rem; }
+    main { padding: 1rem; }
+    .search-bar { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>EL PUENTE DE GALISTEO</h1>
+  <p>Community newsletter archive, 1997&ndash;2024</p>
+</header>
+
+<nav id="nav">
+  <button class="active" data-view="search">Search</button>
+  <button data-view="people">People</button>
+  <button data-view="topics">Topics</button>
+  <button data-view="trends">Trends</button>
+  <button data-view="issues">Browse Issues</button>
+</nav>
+
+<div class="stats-bar" id="stats-bar"></div>
+
+<main id="main">
+  <div class="loading" id="loading">Loading archive...</div>
+</main>
+
+<footer>
+  El Puente de Galisteo, est. 1997. Archive index built from <span id="issue-count">~240</span> issues.
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+// ---- Data loading ----
+let DATA = { articles: [], issues: [], people: {}, topics: {}, trends: {} };
+let currentView = 'search';
+let searchQuery = '';
+let filterType = 'all';
+
+async function loadData() {
+  try {
+    const [articles, issues, people, topics, trends] = await Promise.all([
+      fetch('articles.json').then(r => r.json()),
+      fetch('issues.json').then(r => r.json()),
+      fetch('people.json').then(r => r.json()),
+      fetch('topics.json').then(r => r.json()),
+      fetch('trends.json').then(r => r.json()),
+    ]);
+    DATA = { articles, issues, people, topics, trends };
+
+    // Build lookup
+    DATA.articleMap = {};
+    articles.forEach(a => DATA.articleMap[a.id] = a);
+
+    document.getElementById('stats-bar').innerHTML = `
+      <div><span>${issues.length}</span> issues</div>
+      <div><span>${articles.length}</span> articles</div>
+      <div><span>${Object.keys(people).length}</span> people</div>
+      <div><span>${Object.keys(topics).length}</span> topics</div>
+    `;
+    document.getElementById('issue-count').textContent = issues.length;
+
+    showView('search');
+  } catch (e) {
+    document.getElementById('loading').textContent = 'Error loading data. Make sure JSON files are in the same directory.';
+    console.error(e);
+  }
+}
+
+// ---- Navigation ----
+document.getElementById('nav').addEventListener('click', (e) => {
+  if (e.target.tagName === 'BUTTON') {
+    document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    showView(e.target.dataset.view);
+  }
+});
+
+function showView(view) {
+  currentView = view;
+  const main = document.getElementById('main');
+
+  switch(view) {
+    case 'search': renderSearch(main); break;
+    case 'people': renderPeople(main); break;
+    case 'topics': renderTopics(main); break;
+    case 'trends': renderTrends(main); break;
+    case 'issues': renderIssues(main); break;
+  }
+}
+
+// ---- Search view ----
+function renderSearch(container, prefill = '') {
+  container.innerHTML = `
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="Search articles, people, topics..." value="${escapeHtml(prefill || searchQuery)}">
+      <select id="filter-type">
+        <option value="all">All types</option>
+        <option value="feature">Features</option>
+        <option value="editorial">Editorials</option>
+        <option value="pedacito">Pedacitos</option>
+        <option value="obituary">Obituaries</option>
+        <option value="gca_report">GCA Reports</option>
+        <option value="fire_dept">Fire Dept</option>
+        <option value="church_news">Church News</option>
+        <option value="letter">Letters</option>
+      </select>
+    </div>
+    <div id="results"></div>
+  `;
+
+  const input = document.getElementById('search-input');
+  const filter = document.getElementById('filter-type');
+  filter.value = filterType;
+
+  const doSearch = () => {
+    searchQuery = input.value;
+    filterType = filter.value;
+    performSearch(searchQuery, filterType);
+  };
+
+  input.addEventListener('input', debounce(doSearch, 300));
+  filter.addEventListener('change', doSearch);
+
+  if (prefill || searchQuery) doSearch();
+}
+
+function performSearch(query, type) {
+  const results = document.getElementById('results');
+  let matches = DATA.articles;
+
+  if (type !== 'all') {
+    matches = matches.filter(a => a.section_type === type);
+  }
+
+  if (query.trim()) {
+    const terms = query.toLowerCase().split(/\s+/);
+    matches = matches.filter(a => {
+      const text = `${a.title} ${a.body} ${a.people.join(' ')} ${a.topics.join(' ')}`.toLowerCase();
+      return terms.every(t => text.includes(t));
+    });
+  }
+
+  results.innerHTML = `<div class="result-count">${matches.length} result${matches.length !== 1 ? 's' : ''}</div>`;
+
+  // Show max 100 results
+  const shown = matches.slice(0, 100);
+  shown.forEach(a => {
+    results.appendChild(createArticleCard(a, query));
+  });
+
+  if (matches.length > 100) {
+    results.innerHTML += `<div class="result-count">Showing first 100 of ${matches.length} results. Refine your search to see more.</div>`;
+  }
+}
+
+function createArticleCard(article, highlight = '') {
+  const card = document.createElement('div');
+  card.className = 'article-card';
+
+  const bodyPreview = article.body ? article.body.substring(0, 400) : '';
+  const displayBody = highlight ? highlightText(bodyPreview, highlight) : escapeHtml(bodyPreview);
+  const displayTitle = highlight ? highlightText(article.title || 'Untitled', highlight) : escapeHtml(article.title || 'Untitled');
+
+  card.innerHTML = `
+    <div class="meta">
+      <span class="issue-link" onclick="searchByIssue('${article.issue_numbers}')">Issue #${article.issue_numbers}</span>
+      <span>${article.date_string || ''}</span>
+      <span class="tag tag-section">${article.section_type}</span>
+    </div>
+    <h3>${displayTitle}</h3>
+    ${article.byline ? `<div style="font-style:italic;color:var(--earth);font-size:0.9rem;margin-bottom:0.4rem">By ${escapeHtml(article.byline)}</div>` : ''}
+    <div class="body-preview" id="body-${article.id}">${displayBody}${article.body && article.body.length > 400 ? '...' : ''}</div>
+    ${article.body && article.body.length > 400 ? `<span class="toggle-body" onclick="toggleBody(${article.id})">Show more</span>` : ''}
+    <div style="margin-top:0.5rem">
+      ${article.people.map(p => `<span class="tag tag-person" onclick="searchPerson('${escapeAttr(p)}')">${escapeHtml(p)}</span>`).join('')}
+      ${article.topics.map(t => `<span class="tag tag-topic" onclick="searchTopic('${escapeAttr(t)}')">${escapeHtml(t)}</span>`).join('')}
+    </div>
+  `;
+  return card;
+}
+
+function toggleBody(id) {
+  const el = document.getElementById(`body-${id}`);
+  const article = DATA.articleMap[id];
+  if (el.classList.contains('expanded')) {
+    el.classList.remove('expanded');
+    el.innerHTML = escapeHtml(article.body.substring(0, 400)) + '...';
+    el.nextElementSibling.textContent = 'Show more';
+  } else {
+    el.classList.add('expanded');
+    el.innerHTML = escapeHtml(article.body);
+    el.nextElementSibling.textContent = 'Show less';
+  }
+}
+
+// ---- People view ----
+function renderPeople(container) {
+  const sorted = Object.entries(DATA.people).sort((a, b) => b[1].count - a[1].count);
+  container.innerHTML = `
+    <div class="search-bar">
+      <input type="text" id="people-filter" placeholder="Filter people...">
+    </div>
+    <div class="people-grid" id="people-grid"></div>
+  `;
+
+  const grid = document.getElementById('people-grid');
+  const input = document.getElementById('people-filter');
+
+  function render(filter = '') {
+    const filtered = filter
+      ? sorted.filter(([name]) => name.toLowerCase().includes(filter.toLowerCase()))
+      : sorted;
+    grid.innerHTML = '';
+    filtered.slice(0, 200).forEach(([name, data]) => {
+      const card = document.createElement('div');
+      card.className = 'person-card';
+      card.innerHTML = `<div class="name">${escapeHtml(name)}</div><div class="count">${data.count} mention${data.count !== 1 ? 's' : ''}</div>`;
+      card.onclick = () => searchPerson(name);
+      grid.appendChild(card);
+    });
+  }
+
+  input.addEventListener('input', debounce(() => render(input.value), 200));
+  render();
+}
+
+// ---- Topics view ----
+function renderTopics(container) {
+  const sorted = Object.entries(DATA.topics).sort((a, b) => b[1].count - a[1].count);
+  const maxCount = sorted[0]?.[1].count || 1;
+
+  container.innerHTML = `
+    <div class="topics-cloud" id="topics-cloud"></div>
+    <div id="topic-results"></div>
+  `;
+
+  const cloud = document.getElementById('topics-cloud');
+  sorted.slice(0, 80).forEach(([name, data]) => {
+    const scale = 0.8 + (data.count / maxCount) * 1.2;
+    const chip = document.createElement('span');
+    chip.className = 'topic-chip';
+    chip.style.fontSize = `${scale}rem`;
+    chip.textContent = `${name} (${data.count})`;
+    chip.onclick = () => searchTopic(name);
+    cloud.appendChild(chip);
+  });
+}
+
+// ---- Trends view ----
+let trendChart = null;
+
+function renderTrends(container) {
+  const trends = DATA.trends;
+  if (!trends.topics) {
+    container.innerHTML = '<p>No trend data available.</p>';
+    return;
+  }
+
+  container.innerHTML = `
+    <div id="trends-container">
+      <h3 style="margin-bottom:1rem">Topic frequency over time</h3>
+      <div class="trend-controls" id="trend-controls"></div>
+      <canvas id="trend-canvas" height="400"></canvas>
+    </div>
+  `;
+
+  const colors = [
+    '#c4956a', '#6b9ac4', '#7a8b6f', '#d4726a', '#8b7355',
+    '#9b8ec4', '#c49a6a', '#6bc4a8', '#c46b8b', '#6b8bc4',
+  ];
+
+  const controls = document.getElementById('trend-controls');
+  const selectedTopics = new Set(trends.topics.slice(0, 5));
+
+  function renderControls() {
+    controls.innerHTML = '';
+    trends.topics.forEach(topic => {
+      const btn = document.createElement('button');
+      btn.textContent = topic;
+      btn.className = selectedTopics.has(topic) ? 'selected' : '';
+      btn.onclick = () => {
+        if (selectedTopics.has(topic)) selectedTopics.delete(topic);
+        else selectedTopics.add(topic);
+        renderControls();
+        renderChart();
+      };
+      controls.appendChild(btn);
+    });
+  }
+
+  function renderChart() {
+    const ctx = document.getElementById('trend-canvas').getContext('2d');
+    if (trendChart) trendChart.destroy();
+
+    const datasets = [];
+    let i = 0;
+    selectedTopics.forEach(topic => {
+      const series = trends.series[topic] || {};
+      datasets.push({
+        label: topic,
+        data: trends.dates.map(d => series[d] || 0),
+        borderColor: colors[i % colors.length],
+        backgroundColor: colors[i % colors.length] + '33',
+        fill: false,
+        tension: 0.3,
+        pointRadius: 2,
+      });
+      i++;
+    });
+
+    trendChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: trends.dates, datasets },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          x: { ticks: { maxTicksAuto: true, maxRotation: 45 } },
+          y: { beginAtZero: true, title: { display: true, text: 'Articles per issue' } }
+        },
+        plugins: {
+          legend: { position: 'top' },
+        }
+      }
+    });
+  }
+
+  renderControls();
+  renderChart();
+}
+
+// ---- Issues view ----
+function renderIssues(container) {
+  container.innerHTML = `<div id="issues-list"></div>`;
+  const list = document.getElementById('issues-list');
+
+  let currentYear = '';
+  DATA.issues.forEach(issue => {
+    const year = issue.sort_date ? issue.sort_date.substring(0, 4) : '?';
+    if (year !== currentYear) {
+      currentYear = year;
+      const h = document.createElement('h3');
+      h.textContent = year;
+      h.style.margin = '1.5rem 0 0.5rem';
+      h.style.color = 'var(--earth)';
+      list.appendChild(h);
+    }
+
+    const card = document.createElement('div');
+    card.className = 'article-card';
+    card.style.cursor = 'pointer';
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <strong>Issue #${escapeHtml(issue.issue_numbers)}</strong>
+          &mdash; ${escapeHtml(issue.date_string || '')}
+        </div>
+        <span style="color:var(--earth);font-size:0.85rem">${issue.article_count} articles</span>
+      </div>
+    `;
+    card.onclick = () => searchByIssue(issue.issue_numbers);
+    list.appendChild(card);
+  });
+}
+
+// ---- Helpers ----
+function searchPerson(name) {
+  document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
+  document.querySelector('[data-view="search"]').classList.add('active');
+  searchQuery = name;
+  filterType = 'all';
+  renderSearch(document.getElementById('main'), name);
+}
+
+function searchTopic(name) {
+  document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
+  document.querySelector('[data-view="search"]').classList.add('active');
+  searchQuery = name;
+  filterType = 'all';
+  renderSearch(document.getElementById('main'), name);
+}
+
+function searchByIssue(issueNums) {
+  document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
+  document.querySelector('[data-view="search"]').classList.add('active');
+  currentView = 'search';
+
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="Search within this issue..." value="">
+      <button onclick="showView('search')" style="padding:0.75rem 1rem;border:2px solid var(--earth);border-radius:4px;background:var(--paper);cursor:pointer;font-family:inherit">Back to all</button>
+    </div>
+    <div class="result-count">Issue #${escapeHtml(issueNums)}</div>
+    <div id="results"></div>
+  `;
+
+  const results = document.getElementById('results');
+  const articles = DATA.articles.filter(a => a.issue_numbers === issueNums);
+  articles.forEach(a => results.appendChild(createArticleCard(a)));
+}
+
+function highlightText(text, query) {
+  if (!query.trim()) return escapeHtml(text);
+  const escaped = escapeHtml(text);
+  const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 1);
+  let result = escaped;
+  terms.forEach(term => {
+    const regex = new RegExp(`(${escapeRegex(term)})`, 'gi');
+    result = result.replace(regex, '<span class="highlight">$1</span>');
+  });
+  return result;
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function escapeAttr(str) {
+  return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function debounce(fn, ms) {
+  let timer;
+  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+}
+
+// ---- Init ----
+loadData();
+</script>
+</body>
+</html>
