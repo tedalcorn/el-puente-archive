@@ -508,24 +508,22 @@ function toggleBody(id) {
 
 // ---- People view ----
 function renderPeople(container) {
-  // Recount people excluding boilerplate if toggle is on
-  let peopleCounts;
-  if (hideBoilerplate) {
-    peopleCounts = {};
-    DATA.articles.forEach(a => {
-      if (BOILERPLATE_TYPES.has(a.section_type)) return;
-      a.people.forEach(p => {
-        peopleCounts[p] = (peopleCounts[p] || 0) + 1;
-      });
+  // Recount people excluding boilerplate if toggle is on, and track year ranges
+  let peopleData = {};
+  DATA.articles.forEach(a => {
+    if (hideBoilerplate && BOILERPLATE_TYPES.has(a.section_type)) return;
+    const year = a.sort_date ? parseInt(a.sort_date.substring(0, 4)) : null;
+    a.people.forEach(p => {
+      if (!peopleData[p]) peopleData[p] = { count: 0, minYear: 9999, maxYear: 0 };
+      peopleData[p].count++;
+      if (year) {
+        if (year < peopleData[p].minYear) peopleData[p].minYear = year;
+        if (year > peopleData[p].maxYear) peopleData[p].maxYear = year;
+      }
     });
-  } else {
-    peopleCounts = {};
-    Object.entries(DATA.people).forEach(([name, data]) => {
-      peopleCounts[name] = data.count;
-    });
-  }
+  });
 
-  const sorted = Object.entries(peopleCounts).sort((a, b) => b[1] - a[1]);
+  const sorted = Object.entries(peopleData).sort((a, b) => b[1].count - a[1].count);
 
   container.innerHTML = `
     <div class="search-bar">
@@ -554,10 +552,13 @@ function renderPeople(container) {
       ? sorted.filter(([name]) => name.toLowerCase().includes(filter.toLowerCase()))
       : sorted;
     grid.innerHTML = '';
-    filtered.slice(0, 200).forEach(([name, count]) => {
+    filtered.slice(0, 200).forEach(([name, data]) => {
       const card = document.createElement('div');
       card.className = 'person-card';
-      card.innerHTML = `<div class="name">${escapeHtml(name)}</div><div class="count">${count} mention${count !== 1 ? 's' : ''}</div>`;
+      const yearRange = (data.minYear && data.minYear < 9999)
+        ? (data.minYear === data.maxYear ? `${data.minYear}` : `${data.minYear}&ndash;${data.maxYear}`)
+        : '';
+      card.innerHTML = `<div class="name">${escapeHtml(name)}</div><div class="count">${data.count} mention${data.count !== 1 ? 's' : ''}${yearRange ? ' &middot; ' + yearRange : ''}</div>`;
       card.onclick = () => searchPerson(name);
       grid.appendChild(card);
     });
@@ -569,21 +570,47 @@ function renderPeople(container) {
 
 // ---- Topics view ----
 function renderTopics(container) {
-  const sorted = Object.entries(DATA.topics).sort((a, b) => b[1].count - a[1].count);
-  const maxCount = sorted[0]?.[1].count || 1;
+  // Recount topics excluding boilerplate if toggle is on
+  let topicCounts = {};
+  if (hideBoilerplate) {
+    DATA.articles.forEach(a => {
+      if (BOILERPLATE_TYPES.has(a.section_type)) return;
+      a.topics.forEach(t => {
+        topicCounts[t] = (topicCounts[t] || 0) + 1;
+      });
+    });
+  } else {
+    Object.entries(DATA.topics).forEach(([name, data]) => {
+      topicCounts[name] = data.count;
+    });
+  }
+
+  const sorted = Object.entries(topicCounts).sort((a, b) => b[1] - a[1]);
+  const maxCount = sorted[0]?.[1] || 1;
 
   container.innerHTML = `
+    <div style="margin-bottom:1rem">
+      <label style="font-size:0.9rem;cursor:pointer;color:var(--earth)">
+        <input type="checkbox" id="topics-hide-boilerplate" ${hideBoilerplate ? 'checked' : ''}>
+        Hide classifieds, sponsors &amp; mastheads
+      </label>
+    </div>
     <div class="topics-cloud" id="topics-cloud"></div>
     <div id="topic-results"></div>
   `;
 
+  document.getElementById('topics-hide-boilerplate').addEventListener('change', (e) => {
+    hideBoilerplate = e.target.checked;
+    renderTopics(container);
+  });
+
   const cloud = document.getElementById('topics-cloud');
-  sorted.slice(0, 80).forEach(([name, data]) => {
-    const scale = 0.8 + (data.count / maxCount) * 1.2;
+  sorted.slice(0, 80).forEach(([name, count]) => {
+    const scale = 0.8 + (count / maxCount) * 1.2;
     const chip = document.createElement('span');
     chip.className = 'topic-chip';
     chip.style.fontSize = `${scale}rem`;
-    chip.textContent = `${name} (${data.count})`;
+    chip.textContent = `${name} (${count})`;
     chip.onclick = () => searchTopic(name);
     cloud.appendChild(chip);
   });
@@ -603,7 +630,9 @@ function renderTrends(container) {
     <div id="trends-container">
       <h3 style="margin-bottom:1rem">Topic frequency over time</h3>
       <div class="trend-controls" id="trend-controls"></div>
-      <canvas id="trend-canvas" height="400"></canvas>
+      <div style="height:450px;max-height:60vh;position:relative">
+        <canvas id="trend-canvas"></canvas>
+      </div>
     </div>
   `;
 
@@ -642,24 +671,33 @@ function renderTrends(container) {
       datasets.push({
         label: topic,
         data: trends.dates.map(d => series[d] || 0),
+        backgroundColor: colors[i % colors.length] + 'cc',
         borderColor: colors[i % colors.length],
-        backgroundColor: colors[i % colors.length] + '33',
-        fill: false,
-        tension: 0.3,
-        pointRadius: 2,
+        borderWidth: 1,
       });
       i++;
     });
 
     trendChart = new Chart(ctx, {
-      type: 'line',
+      type: 'bar',
       data: { labels: trends.dates, datasets },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         scales: {
-          x: { ticks: { maxTicksAuto: true, maxRotation: 45 } },
-          y: { beginAtZero: true, title: { display: true, text: 'Articles per issue' } }
+          x: {
+            stacked: true,
+            ticks: {
+              maxRotation: 45,
+              callback: function(val, idx) {
+                // Show only year labels to reduce clutter
+                const label = this.getLabelForValue(idx);
+                return label.endsWith('-01') ? label.substring(0, 4) : '';
+              }
+            }
+          },
+          y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Articles' } }
         },
         plugins: {
           legend: { position: 'top' },
