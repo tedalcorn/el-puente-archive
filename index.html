@@ -776,7 +776,16 @@ function renderIssues(container) {
     byYear[year].forEach(issue => {
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:0.15rem 0.3rem;border-radius:3px;cursor:pointer;font-size:0.85rem';
-      const monthOnly = (issue.date_string || '').replace(/-\d{4}$/, '');
+      const MONTH_MAP = {
+        jan:'January', feb:'February', mar:'March', apr:'April',
+        jun:'June', jul:'July', aug:'August', sep:'September',
+        sept:'September', oct:'October', nov:'November', dec:'December'
+      };
+      const monthOnly = (issue.date_string || '')
+        .replace(/-\d{4}$/, '')
+        .split('-')
+        .map(p => MONTH_MAP[p.toLowerCase()] || (p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()))
+        .join('-');
       row.innerHTML = `<strong>#${escapeHtml(issue.issue_numbers)}</strong> ${escapeHtml(monthOnly)}`;
       row.onmouseover = () => row.style.background = 'var(--sand)';
       row.onmouseout  = () => row.style.background = '';
