@@ -722,29 +722,27 @@ function renderIssues(container) {
   });
 
   let currentYear = '';
+  let grid = null;
   sortedIssues.forEach(issue => {
     const year = issue.sort_date ? issue.sort_date.substring(0, 4) : '?';
     if (year !== currentYear) {
       currentYear = year;
       const h = document.createElement('h3');
       h.textContent = year;
-      h.style.margin = '1.5rem 0 0.5rem';
-      h.style.color = 'var(--earth)';
+      h.style.cssText = 'margin:1.5rem 0 0.4rem;color:var(--earth);grid-column:1/-1';
+      list.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:0.3rem 1.5rem';
       list.appendChild(h);
+      grid = list;
     }
 
     const card = document.createElement('div');
-    card.className = 'article-card';
-    card.style.cursor = 'pointer';
+    card.style.cssText = 'cursor:pointer;padding:0.3rem 0.5rem;border-radius:4px;font-size:0.9rem;display:flex;justify-content:space-between;align-items:baseline';
     card.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <strong>Issue #${escapeHtml(issue.issue_numbers)}</strong>
-          &mdash; ${escapeHtml(issue.date_string || '')}
-        </div>
-        <span style="color:var(--earth);font-size:0.85rem">${issue.article_count} articles</span>
-      </div>
+      <span><strong>#${escapeHtml(issue.issue_numbers)}</strong> &mdash; ${escapeHtml(issue.date_string || '')}</span>
+      <span style="color:var(--earth);font-size:0.8rem;white-space:nowrap;margin-left:0.5rem">${issue.article_count} art.</span>
     `;
+    card.onmouseover = () => card.style.background = 'var(--paper)';
+    card.onmouseout  = () => card.style.background = '';
     card.onclick = () => searchByIssue(issue.issue_numbers);
     list.appendChild(card);
   });
