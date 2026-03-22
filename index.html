@@ -751,7 +751,7 @@ function renderIssues(container) {
 
   // Build grid of year boxes
   const grid = document.createElement('div');
-  grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;align-items:start';
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;align-items:start';
 
   Object.keys(byYear).sort().forEach(year => {
     const box = document.createElement('div');
@@ -765,10 +765,7 @@ function renderIssues(container) {
     byYear[year].forEach(issue => {
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:0.15rem 0.3rem;border-radius:3px;cursor:pointer;font-size:0.85rem';
-      row.innerHTML = `
-        <span><strong>#${escapeHtml(issue.issue_numbers)}</strong> &mdash; ${escapeHtml(issue.date_string || '')}</span>
-        <span style="color:var(--earth);white-space:nowrap;margin-left:0.5rem">${issue.article_count}</span>
-      `;
+      row.innerHTML = `<strong>#${escapeHtml(issue.issue_numbers)}</strong> &mdash; ${escapeHtml(issue.date_string || '')}`;
       row.onmouseover = () => row.style.background = 'var(--sand)';
       row.onmouseout  = () => row.style.background = '';
       row.onclick = () => searchByIssue(issue.issue_numbers);
@@ -877,7 +874,6 @@ loadData();
 
 <script>
 function sendFeedback() {
-  const url = window.location.href;
   const body = encodeURIComponent(
 `
 
@@ -886,9 +882,7 @@ Observed a problem?
 Thought of a new feature?
 Let us know above the stars!
 
-(And if applicable, include the issue number / article title.)
-
--- Page: ${url}`
+(And if applicable, include the issue number / article title.)`
   );
   window.location.href = 'mailto:ted.alcorn@gmail.com?subject=El%20Puente%20Archive%20Feedback&body=' + body;
 }
