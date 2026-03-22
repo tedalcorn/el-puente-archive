@@ -782,7 +782,8 @@ function renderIssues(container) {
         sept:'September', oct:'October', nov:'November', dec:'December'
       };
       const monthOnly = (issue.date_string || '')
-        .replace(/-\d{4}$/, '')
+        .replace(/-\d{4}$/, '')   // drop trailing year
+        .replace(/-\d{4}/g, '')   // drop any interior years
         .split('-')
         .map(p => MONTH_MAP[p.toLowerCase()] || (p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()))
         .join('-');
