@@ -715,8 +715,14 @@ function renderIssues(container) {
   container.innerHTML = `<div id="issues-list"></div>`;
   const list = document.getElementById('issues-list');
 
+  const sortedIssues = [...DATA.issues].sort((a, b) => {
+    const numA = parseInt(a.issue_numbers.split('-')[0], 10);
+    const numB = parseInt(b.issue_numbers.split('-')[0], 10);
+    return numA - numB;
+  });
+
   let currentYear = '';
-  DATA.issues.forEach(issue => {
+  sortedIssues.forEach(issue => {
     const year = issue.sort_date ? issue.sort_date.substring(0, 4) : '?';
     if (year !== currentYear) {
       currentYear = year;
@@ -813,6 +819,43 @@ function debounce(fn, ms) {
 
 // ---- Init ----
 loadData();
+</script>
+
+<style>
+  #feedback-btn {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background: var(--earth);
+    color: var(--sand);
+    border: none;
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    font-family: Georgia, serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+    opacity: 0.85;
+    z-index: 1000;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  }
+  #feedback-btn:hover { opacity: 1; }
+</style>
+
+<button id="feedback-btn" onclick="sendFeedback()">Send Feedback</button>
+
+<script>
+function sendFeedback() {
+  const url = window.location.href;
+  const body = encodeURIComponent(
+`Type: [ article content / OCR quality / tagging or categorization / missing issue / UI confusion / feature request / other ]
+Issue # (if applicable):
+Article title (if applicable):
+What I observed:
+
+-- Page I was on: ${url}`
+  );
+  window.location.href = 'mailto:ted.alcorn@gmail.com?subject=El%20Puente%20Archive%20Feedback&body=' + body;
+}
 </script>
 </body>
 </html>
