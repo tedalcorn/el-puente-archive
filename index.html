@@ -523,11 +523,29 @@ function renderPeople(container) {
     });
   });
 
-  const sorted = Object.entries(peopleData).sort((a, b) => b[1].count - a[1].count);
+  let peopleSort = 'frequency'; // 'frequency' or 'name'
+
+  function getSorted() {
+    const entries = Object.entries(peopleData);
+    if (peopleSort === 'name') {
+      return entries.sort((a, b) => {
+        const lastA = a[0].split(' ').pop().toLowerCase();
+        const lastB = b[0].split(' ').pop().toLowerCase();
+        return lastA < lastB ? -1 : lastA > lastB ? 1 : 0;
+      });
+    }
+    return entries.sort((a, b) => b[1].count - a[1].count);
+  }
 
   container.innerHTML = `
     <div class="search-bar">
       <input type="text" id="people-filter" placeholder="Filter people...">
+    </div>
+    <div style="margin-bottom:0.4rem;font-size:0.9rem;color:var(--earth)">
+      Order by&nbsp;
+      <label style="cursor:pointer"><input type="radio" name="people-sort" value="frequency" checked> frequency of mention</label>
+      &nbsp;&nbsp;
+      <label style="cursor:pointer"><input type="radio" name="people-sort" value="name"> last name</label>
     </div>
     <div style="margin-bottom:1rem">
       <label style="font-size:0.9rem;cursor:pointer;color:var(--earth)">
@@ -547,7 +565,12 @@ function renderPeople(container) {
     renderPeople(container);
   });
 
+  document.querySelectorAll('input[name="people-sort"]').forEach(r => {
+    r.addEventListener('change', () => { peopleSort = r.value; render(input.value); });
+  });
+
   function render(filter = '') {
+    const sorted = getSorted();
     const filtered = filter
       ? sorted.filter(([name]) => name.toLowerCase().includes(filter.toLowerCase()))
       : sorted;
