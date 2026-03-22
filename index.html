@@ -620,18 +620,24 @@ function renderPeople(container) {
     output.appendChild(grid);
   }
 
+  function primaryLast(name) {
+    // For Spanish compound surnames (e.g. "Ortiz y Pino"), sort by the word before " y "
+    if (name.includes(' y ')) return name.split(' y ')[0].split(' ').pop().toLowerCase();
+    return name.split(' ').pop().toLowerCase();
+  }
+
   function renderAlpha(entries) {
-    // Sort by last name
+    // Sort by primary last name
     entries.sort((a, b) => {
-      const lA = a[0].split(' ').pop().toLowerCase();
-      const lB = b[0].split(' ').pop().toLowerCase();
+      const lA = primaryLast(a[0]);
+      const lB = primaryLast(b[0]);
       return lA < lB ? -1 : lA > lB ? 1 : 0;
     });
 
-    // Group by first letter of last name
+    // Group by first letter of primary last name
     const byLetter = {};
     entries.forEach(([name, data]) => {
-      const letter = name.split(' ').pop()[0].toUpperCase();
+      const letter = primaryLast(name)[0].toUpperCase();
       if (!byLetter[letter]) byLetter[letter] = [];
       byLetter[letter].push([name, data]);
     });
