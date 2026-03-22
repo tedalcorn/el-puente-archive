@@ -1077,25 +1077,10 @@ loadData();
     z-index: 1000;
     box-shadow: 0 2px 6px rgba(0,0,0,0.25);
   }
-  #feedback-btn:hover { opacity: 1; }
+  #feedback-btn:hover { opacity: 1; text-decoration: none; }
+  #feedback-btn { text-decoration: none; }
 </style>
 
-<button id="feedback-btn" onclick="sendFeedback()">Send Feedback</button>
-
-<script>
-function sendFeedback() {
-  const body = encodeURIComponent(
-`
-
-*****
-Observed a problem?
-Thought of a new feature?
-Let us know above the stars!
-
-(And if applicable, include the issue number / article title.)`
-  );
-  window.location.href = 'mailto:ted.alcorn@gmail.com?subject=El%20Puente%20Archive%20Feedback&body=' + body;
-}
-</script>
+<a id="feedback-btn" href="https://forms.gle/VqyX3YMS3mgoaNy29" target="_blank" rel="noopener">Send Feedback</a>
 </body>
 </html>
