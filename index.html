@@ -845,7 +845,9 @@ function renderTrends(container) {
   ];
 
   // Aggregate monthly series into annual
-  const annualDates = [...new Set(trends.dates.map(d => d.substring(0, 4)))].sort();
+  // Drop the most recent year — it's incomplete and makes trends look like they plummeted.
+  // It will automatically appear once issues from the following year are added.
+  const annualDates = [...new Set(trends.dates.map(d => d.substring(0, 4)))].sort().slice(0, -1);
   const annualSeries = {};
   trends.topics.forEach(topic => {
     const monthly = trends.series[topic] || {};
