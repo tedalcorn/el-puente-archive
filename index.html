@@ -177,6 +177,17 @@
     color: white;
   }
 
+  /* View: Browse Issues */
+  .year-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .year-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 650px) { .year-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 400px) { .year-grid { grid-template-columns: 1fr; } }
+
   /* View: People */
   .people-grid {
     display: grid;
@@ -751,7 +762,7 @@ function renderIssues(container) {
 
   // Build grid of year boxes
   const grid = document.createElement('div');
-  grid.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;align-items:start';
+  grid.className = 'year-grid';
 
   Object.keys(byYear).sort().forEach(year => {
     const box = document.createElement('div');
@@ -765,7 +776,8 @@ function renderIssues(container) {
     byYear[year].forEach(issue => {
       const row = document.createElement('div');
       row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:0.15rem 0.3rem;border-radius:3px;cursor:pointer;font-size:0.85rem';
-      row.innerHTML = `<strong>#${escapeHtml(issue.issue_numbers)}</strong> &mdash; ${escapeHtml(issue.date_string || '')}`;
+      const monthOnly = (issue.date_string || '').replace(/-\d{4}$/, '');
+      row.innerHTML = `<strong>#${escapeHtml(issue.issue_numbers)}</strong> ${escapeHtml(monthOnly)}`;
       row.onmouseover = () => row.style.background = 'var(--sand)';
       row.onmouseout  = () => row.style.background = '';
       row.onclick = () => searchByIssue(issue.issue_numbers);
