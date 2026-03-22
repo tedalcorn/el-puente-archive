@@ -847,12 +847,16 @@ loadData();
 function sendFeedback() {
   const url = window.location.href;
   const body = encodeURIComponent(
-`Type: [ article content / OCR quality / tagging or categorization / missing issue / UI confusion / feature request / other ]
-Issue # (if applicable):
-Article title (if applicable):
-What I observed:
+`
 
--- Page I was on: ${url}`
+*****
+Observed a problem?
+Thought of a new feature?
+Let us know above the stars!
+
+(And if applicable, include the issue number / article title.)
+
+-- Page: ${url}`
   );
   window.location.href = 'mailto:ted.alcorn@gmail.com?subject=El%20Puente%20Archive%20Feedback&body=' + body;
 }
