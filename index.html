@@ -206,6 +206,42 @@
 
   .person-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
   .person-card .name { font-weight: bold; }
+
+  /* Alpha directory */
+  .az-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem;
+    margin-bottom: 0.75rem;
+  }
+  .az-bar a {
+    color: var(--sky);
+    text-decoration: none;
+    font-size: 0.9rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    font-family: Georgia, serif;
+  }
+  .az-bar a:hover { background: var(--paper); }
+  .az-bar a.empty { color: #bbb; pointer-events: none; }
+  .alpha-section h4 {
+    color: var(--earth);
+    font-size: 1.1rem;
+    margin: 1rem 0 0.3rem;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 0.2rem;
+  }
+  .alpha-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  .alpha-row:hover { background: var(--paper); }
+  .alpha-row .meta { color: var(--earth); font-size: 0.8rem; white-space: nowrap; margin-left: 1rem; }
   .person-card .count { color: var(--earth); font-size: 0.85rem; }
 
   /* View: Topics */
@@ -534,19 +570,7 @@ function renderPeople(container) {
     });
   });
 
-  let peopleSort = 'frequency'; // 'frequency' or 'name'
-
-  function getSorted() {
-    const entries = Object.entries(peopleData);
-    if (peopleSort === 'name') {
-      return entries.sort((a, b) => {
-        const lastA = a[0].split(' ').pop().toLowerCase();
-        const lastB = b[0].split(' ').pop().toLowerCase();
-        return lastA < lastB ? -1 : lastA > lastB ? 1 : 0;
-      });
-    }
-    return entries.sort((a, b) => b[1].count - a[1].count);
-  }
+  let peopleSort = 'frequency';
 
   container.innerHTML = `
     <div class="search-bar">
@@ -564,38 +588,100 @@ function renderPeople(container) {
         Hide classifieds, sponsors &amp; mastheads
       </label>
     </div>
-    <div class="people-grid" id="people-grid"></div>
+    <div id="people-output"></div>
   `;
 
-  const grid = document.getElementById('people-grid');
-  const input = document.getElementById('people-filter');
+  const output = document.getElementById('people-output');
+  const input  = document.getElementById('people-filter');
   const toggle = document.getElementById('people-hide-boilerplate');
 
-  toggle.addEventListener('change', () => {
-    hideBoilerplate = toggle.checked;
-    renderPeople(container);
-  });
-
+  toggle.addEventListener('change', () => { hideBoilerplate = toggle.checked; renderPeople(container); });
   document.querySelectorAll('input[name="people-sort"]').forEach(r => {
     r.addEventListener('change', () => { peopleSort = r.value; render(input.value); });
   });
 
-  function render(filter = '') {
-    const sorted = getSorted();
-    const filtered = filter
-      ? sorted.filter(([name]) => name.toLowerCase().includes(filter.toLowerCase()))
-      : sorted;
-    grid.innerHTML = '';
-    filtered.slice(0, 200).forEach(([name, data]) => {
+  function yearRange(data) {
+    if (!data.minYear || data.minYear === 9999) return '';
+    return data.minYear === data.maxYear ? `${data.minYear}` : `${data.minYear}&ndash;${data.maxYear}`;
+  }
+
+  function renderFrequency(entries) {
+    const grid = document.createElement('div');
+    grid.className = 'people-grid';
+    entries.slice(0, 300).forEach(([name, data]) => {
       const card = document.createElement('div');
       card.className = 'person-card';
-      const yearRange = (data.minYear && data.minYear < 9999)
-        ? (data.minYear === data.maxYear ? `${data.minYear}` : `${data.minYear}&ndash;${data.maxYear}`)
-        : '';
-      card.innerHTML = `<div class="name">${escapeHtml(name)}</div><div class="count">${data.count} mention${data.count !== 1 ? 's' : ''}${yearRange ? ' &middot; ' + yearRange : ''}</div>`;
+      const yr = yearRange(data);
+      card.innerHTML = `<div class="name">${escapeHtml(name)}</div><div class="count">${data.count} mention${data.count !== 1 ? 's' : ''}${yr ? ' &middot; ' + yr : ''}</div>`;
       card.onclick = () => searchPerson(name);
       grid.appendChild(card);
     });
+    output.innerHTML = '';
+    output.appendChild(grid);
+  }
+
+  function renderAlpha(entries) {
+    // Sort by last name
+    entries.sort((a, b) => {
+      const lA = a[0].split(' ').pop().toLowerCase();
+      const lB = b[0].split(' ').pop().toLowerCase();
+      return lA < lB ? -1 : lA > lB ? 1 : 0;
+    });
+
+    // Group by first letter of last name
+    const byLetter = {};
+    entries.forEach(([name, data]) => {
+      const letter = name.split(' ').pop()[0].toUpperCase();
+      if (!byLetter[letter]) byLetter[letter] = [];
+      byLetter[letter].push([name, data]);
+    });
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+    // A-Z bar
+    const bar = document.createElement('div');
+    bar.className = 'az-bar';
+    letters.forEach(l => {
+      const a = document.createElement('a');
+      a.textContent = l;
+      a.href = '#alpha-' + l;
+      if (!byLetter[l]) a.className = 'empty';
+      bar.appendChild(a);
+    });
+
+    // Letter sections
+    const sections = document.createElement('div');
+    letters.filter(l => byLetter[l]).forEach(l => {
+      const sec = document.createElement('div');
+      sec.className = 'alpha-section';
+      sec.id = 'alpha-' + l;
+      const h = document.createElement('h4');
+      h.textContent = l;
+      sec.appendChild(h);
+      byLetter[l].forEach(([name, data]) => {
+        const row = document.createElement('div');
+        row.className = 'alpha-row';
+        const yr = yearRange(data);
+        row.innerHTML = `<span>${escapeHtml(name)}</span><span class="meta">${data.count} mention${data.count !== 1 ? 's' : ''}${yr ? ' &middot; ' + yr : ''}</span>`;
+        row.onclick = () => searchPerson(name);
+        sec.appendChild(row);
+      });
+      sections.appendChild(sec);
+    });
+
+    output.innerHTML = '';
+    output.appendChild(bar);
+    output.appendChild(sections);
+  }
+
+  function render(filter = '') {
+    let entries = Object.entries(peopleData);
+    if (filter) entries = entries.filter(([name]) => name.toLowerCase().includes(filter.toLowerCase()));
+    if (peopleSort === 'name') {
+      renderAlpha(entries);
+    } else {
+      entries.sort((a, b) => b[1].count - a[1].count);
+      renderFrequency(entries);
+    }
   }
 
   input.addEventListener('input', debounce(() => render(input.value), 200));
