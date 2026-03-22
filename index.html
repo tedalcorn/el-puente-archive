@@ -626,14 +626,9 @@ function renderPeople(container) {
     return name.split(' ').pop().toLowerCase();
   }
 
-  function renderAlpha(entries) {
-    // Sort by primary last name
-    entries.sort((a, b) => {
-      const lA = primaryLast(a[0]);
-      const lB = primaryLast(b[0]);
-      return lA < lB ? -1 : lA > lB ? 1 : 0;
-    });
+  let activeLetter = 'A';
 
+  function renderAlpha(entries) {
     // Group by first letter of primary last name
     const byLetter = {};
     entries.forEach(([name, data]) => {
@@ -643,40 +638,56 @@ function renderPeople(container) {
     });
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
+    // If activeLetter has no entries, pick first available
+    if (!byLetter[activeLetter]) activeLetter = letters.find(l => byLetter[l]) || 'A';
+
+    function showLetter(l) {
+      activeLetter = l;
+
+      // Update bar highlighting
+      document.querySelectorAll('.az-bar button').forEach(btn => {
+        btn.style.fontWeight = btn.dataset.letter === l ? 'bold' : '';
+        btn.style.color     = btn.dataset.letter === l ? 'var(--ink)' : '';
+      });
+
+      // Render names for this letter, sorted by primary last name then first name
+      const nameList = document.getElementById('alpha-namelist');
+      nameList.innerHTML = '';
+      (byLetter[l] || [])
+        .sort((a, b) => {
+          const lA = primaryLast(a[0]), lB = primaryLast(b[0]);
+          return lA < lB ? -1 : lA > lB ? 1 : a[0] < b[0] ? -1 : 1;
+        })
+        .forEach(([name, data]) => {
+          const row = document.createElement('div');
+          row.className = 'alpha-row';
+          const yr = yearRange(data);
+          row.innerHTML = `<span>${escapeHtml(name)}</span><span class="meta">${data.count} mention${data.count !== 1 ? 's' : ''}${yr ? ' &middot; ' + yr : ''}</span>`;
+          row.onclick = () => searchPerson(name);
+          nameList.appendChild(row);
+        });
+    }
+
     // A-Z bar
     const bar = document.createElement('div');
     bar.className = 'az-bar';
     letters.forEach(l => {
-      const a = document.createElement('a');
-      a.textContent = l;
-      a.href = '#alpha-' + l;
-      if (!byLetter[l]) a.className = 'empty';
-      bar.appendChild(a);
+      const btn = document.createElement('button');
+      btn.textContent = l;
+      btn.dataset.letter = l;
+      btn.style.cssText = 'background:none;border:none;cursor:pointer;font-family:Georgia,serif;font-size:0.9rem;padding:0.1rem 0.35rem;border-radius:3px;color:var(--sky)';
+      if (!byLetter[l]) { btn.style.color = '#bbb'; btn.disabled = true; }
+      else btn.addEventListener('click', () => showLetter(l));
+      bar.appendChild(btn);
     });
 
-    // Letter sections
-    const sections = document.createElement('div');
-    letters.filter(l => byLetter[l]).forEach(l => {
-      const sec = document.createElement('div');
-      sec.className = 'alpha-section';
-      sec.id = 'alpha-' + l;
-      const h = document.createElement('h4');
-      h.textContent = l;
-      sec.appendChild(h);
-      byLetter[l].forEach(([name, data]) => {
-        const row = document.createElement('div');
-        row.className = 'alpha-row';
-        const yr = yearRange(data);
-        row.innerHTML = `<span>${escapeHtml(name)}</span><span class="meta">${data.count} mention${data.count !== 1 ? 's' : ''}${yr ? ' &middot; ' + yr : ''}</span>`;
-        row.onclick = () => searchPerson(name);
-        sec.appendChild(row);
-      });
-      sections.appendChild(sec);
-    });
+    const nameList = document.createElement('div');
+    nameList.id = 'alpha-namelist';
 
     output.innerHTML = '';
     output.appendChild(bar);
-    output.appendChild(sections);
+    output.appendChild(nameList);
+    showLetter(activeLetter);
   }
 
   function render(filter = '') {
