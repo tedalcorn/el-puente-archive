@@ -735,40 +735,51 @@ function renderTrends(container) {
 
 // ---- Issues view ----
 function renderIssues(container) {
-  container.innerHTML = `<div id="issues-list"></div>`;
-  const list = document.getElementById('issues-list');
-
   const sortedIssues = [...DATA.issues].sort((a, b) => {
     const numA = parseInt(a.issue_numbers.split('-')[0], 10);
     const numB = parseInt(b.issue_numbers.split('-')[0], 10);
     return numA - numB;
   });
 
-  let currentYear = '';
-  let grid = null;
+  // Group by year
+  const byYear = {};
   sortedIssues.forEach(issue => {
     const year = issue.sort_date ? issue.sort_date.substring(0, 4) : '?';
-    if (year !== currentYear) {
-      currentYear = year;
-      const h = document.createElement('h3');
-      h.textContent = year;
-      h.style.cssText = 'margin:1.5rem 0 0.4rem;color:var(--earth);grid-column:1/-1';
-      list.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:0.3rem 1.5rem';
-      list.appendChild(h);
-      grid = list;
-    }
-
-    const card = document.createElement('div');
-    card.style.cssText = 'cursor:pointer;padding:0.3rem 0.5rem;border-radius:4px;font-size:0.9rem;display:flex;justify-content:space-between;align-items:baseline';
-    card.innerHTML = `
-      <span><strong>#${escapeHtml(issue.issue_numbers)}</strong> &mdash; ${escapeHtml(issue.date_string || '')}</span>
-      <span style="color:var(--earth);font-size:0.8rem;white-space:nowrap;margin-left:0.5rem">${issue.article_count} art.</span>
-    `;
-    card.onmouseover = () => card.style.background = 'var(--paper)';
-    card.onmouseout  = () => card.style.background = '';
-    card.onclick = () => searchByIssue(issue.issue_numbers);
-    list.appendChild(card);
+    if (!byYear[year]) byYear[year] = [];
+    byYear[year].push(issue);
   });
+
+  // Build grid of year boxes
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;align-items:start';
+
+  Object.keys(byYear).sort().forEach(year => {
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--paper);border:1px solid #ddd;border-radius:6px;padding:0.75rem';
+
+    const heading = document.createElement('div');
+    heading.textContent = year;
+    heading.style.cssText = 'font-weight:bold;color:var(--earth);margin-bottom:0.4rem;font-size:1rem';
+    box.appendChild(heading);
+
+    byYear[year].forEach(issue => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;justify-content:space-between;align-items:baseline;padding:0.15rem 0.3rem;border-radius:3px;cursor:pointer;font-size:0.85rem';
+      row.innerHTML = `
+        <span><strong>#${escapeHtml(issue.issue_numbers)}</strong> &mdash; ${escapeHtml(issue.date_string || '')}</span>
+        <span style="color:var(--earth);white-space:nowrap;margin-left:0.5rem">${issue.article_count}</span>
+      `;
+      row.onmouseover = () => row.style.background = 'var(--sand)';
+      row.onmouseout  = () => row.style.background = '';
+      row.onclick = () => searchByIssue(issue.issue_numbers);
+      box.appendChild(row);
+    });
+
+    grid.appendChild(box);
+  });
+
+  container.innerHTML = '';
+  container.appendChild(grid);
 }
 
 // ---- Helpers ----
