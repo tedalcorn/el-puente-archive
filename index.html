@@ -379,6 +379,7 @@ let currentView = 'search';
 let searchQuery = '';
 let filterType = 'all';
 let hideBoilerplate = true; // hide classifieds, sponsors, mastheads by default
+let topicFilter = null; // when set, search filters by exact topic tag
 
 const BOILERPLATE_TYPES = new Set(['classified', 'sponsor', 'masthead']);
 
@@ -467,6 +468,7 @@ function renderSearch(container, prefill = '') {
   filter.value = filterType;
 
   const doSearch = () => {
+    topicFilter = null; // user typing clears topic-tag mode
     searchQuery = input.value;
     filterType = filter.value;
     hideBoilerplate = boilerplateToggle.checked;
@@ -492,7 +494,10 @@ function performSearch(query, type) {
     matches = matches.filter(a => a.section_type === type);
   }
 
-  if (query.trim()) {
+  if (topicFilter) {
+    const tf = topicFilter.toLowerCase();
+    matches = matches.filter(a => a.topics.some(t => t.toLowerCase() === tf));
+  } else if (query.trim()) {
     const terms = query.toLowerCase().split(/\s+/);
     matches = matches.filter(a => {
       const text = `${a.title} ${a.body} ${a.people.join(' ')} ${a.topics.join(' ')}`.toLowerCase();
@@ -891,15 +896,20 @@ function renderTrends(container) {
     });
 
     trendChart = new Chart(ctx, {
-      type: 'bar',
-      data: { labels: annualDates, datasets },
+      type: 'line',
+      data: { labels: annualDates, datasets: datasets.map(ds => ({
+        ...ds,
+        fill: false,
+        tension: 0.3,
+        pointRadius: 3,
+        borderWidth: 2,
+      })) },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         scales: {
           x: {
-            stacked: true,
             ticks: {
               maxRotation: 0,
               callback: function(val, idx) {
@@ -908,7 +918,7 @@ function renderTrends(container) {
               }
             }
           },
-          y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Articles' } }
+          y: { beginAtZero: true, title: { display: true, text: 'Articles' } }
         },
         plugins: { legend: { position: 'top' } }
       }
@@ -988,6 +998,7 @@ function searchPerson(name) {
 function searchTopic(name) {
   document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
   document.querySelector('[data-view="search"]').classList.add('active');
+  topicFilter = name;
   searchQuery = name;
   filterType = 'all';
   renderSearch(document.getElementById('main'), name);
