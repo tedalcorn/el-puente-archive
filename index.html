@@ -706,51 +706,112 @@ function renderPeople(container) {
 }
 
 // ---- Topics view ----
+let topicsSort = 'frequency';
+let topicsActiveLetter = 'A';
+
 function renderTopics(container) {
-  // Recount topics excluding boilerplate if toggle is on
   let topicCounts = {};
-  if (hideBoilerplate) {
-    DATA.articles.forEach(a => {
-      if (BOILERPLATE_TYPES.has(a.section_type)) return;
-      a.topics.forEach(t => {
-        topicCounts[t] = (topicCounts[t] || 0) + 1;
-      });
-    });
-  } else {
-    Object.entries(DATA.topics).forEach(([name, data]) => {
-      topicCounts[name] = data.count;
-    });
-  }
+  DATA.articles.forEach(a => {
+    if (hideBoilerplate && BOILERPLATE_TYPES.has(a.section_type)) return;
+    a.topics.forEach(t => { topicCounts[t] = (topicCounts[t] || 0) + 1; });
+  });
 
   const sorted = Object.entries(topicCounts).sort((a, b) => b[1] - a[1]);
   const maxCount = sorted[0]?.[1] || 1;
 
   container.innerHTML = `
+    <div style="margin-bottom:0.4rem;font-size:0.9rem;color:var(--earth)">
+      Order by&nbsp;
+      <label style="cursor:pointer"><input type="radio" name="topics-sort" value="frequency" ${topicsSort === 'frequency' ? 'checked' : ''}> frequency</label>
+      &nbsp;&nbsp;
+      <label style="cursor:pointer"><input type="radio" name="topics-sort" value="name"> topic name</label>
+    </div>
     <div style="margin-bottom:1rem">
       <label style="font-size:0.9rem;cursor:pointer;color:var(--earth)">
         <input type="checkbox" id="topics-hide-boilerplate" ${hideBoilerplate ? 'checked' : ''}>
         Hide classifieds, sponsors &amp; mastheads
       </label>
     </div>
-    <div class="topics-cloud" id="topics-cloud"></div>
-    <div id="topic-results"></div>
+    <div id="topics-output"></div>
   `;
 
   document.getElementById('topics-hide-boilerplate').addEventListener('change', (e) => {
     hideBoilerplate = e.target.checked;
     renderTopics(container);
   });
-
-  const cloud = document.getElementById('topics-cloud');
-  sorted.slice(0, 80).forEach(([name, count]) => {
-    const scale = 0.8 + (count / maxCount) * 1.2;
-    const chip = document.createElement('span');
-    chip.className = 'topic-chip';
-    chip.style.fontSize = `${scale}rem`;
-    chip.textContent = `${name} (${count})`;
-    chip.onclick = () => searchTopic(name);
-    cloud.appendChild(chip);
+  document.querySelectorAll('input[name="topics-sort"]').forEach(r => {
+    r.addEventListener('change', () => { topicsSort = r.value; renderMode(); });
   });
+
+  const output = document.getElementById('topics-output');
+
+  function renderFrequency() {
+    const cloud = document.createElement('div');
+    cloud.className = 'topics-cloud';
+    sorted.slice(0, 80).forEach(([name, count]) => {
+      const scale = 0.8 + (count / maxCount) * 1.2;
+      const chip = document.createElement('span');
+      chip.className = 'topic-chip';
+      chip.style.fontSize = `${scale}rem`;
+      chip.textContent = `${name} (${count})`;
+      chip.onclick = () => searchTopic(name);
+      cloud.appendChild(chip);
+    });
+    output.innerHTML = '';
+    output.appendChild(cloud);
+  }
+
+  function renderAlpha() {
+    const byLetter = {};
+    sorted.forEach(([name, count]) => {
+      const letter = name[0].toUpperCase();
+      if (!byLetter[letter]) byLetter[letter] = [];
+      byLetter[letter].push([name, count]);
+    });
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    if (!byLetter[topicsActiveLetter]) topicsActiveLetter = letters.find(l => byLetter[l]) || 'A';
+
+    function showLetter(l) {
+      topicsActiveLetter = l;
+      document.querySelectorAll('.topics-az-bar button').forEach(btn => {
+        btn.style.fontWeight = btn.dataset.letter === l ? 'bold' : '';
+        btn.style.color     = btn.dataset.letter === l ? 'var(--ink)' : '';
+      });
+      const list = document.getElementById('topics-alpha-list');
+      list.innerHTML = '';
+      (byLetter[l] || []).sort((a, b) => a[0] < b[0] ? -1 : 1).forEach(([name, count]) => {
+        const row = document.createElement('div');
+        row.className = 'alpha-row';
+        row.innerHTML = `<span>${escapeHtml(name)}</span><span class="meta">${count} article${count !== 1 ? 's' : ''}</span>`;
+        row.onclick = () => searchTopic(name);
+        list.appendChild(row);
+      });
+    }
+
+    const bar = document.createElement('div');
+    bar.className = 'az-bar topics-az-bar';
+    letters.forEach(l => {
+      const btn = document.createElement('button');
+      btn.textContent = l;
+      btn.dataset.letter = l;
+      btn.style.cssText = 'background:none;border:none;cursor:pointer;font-family:Georgia,serif;font-size:0.9rem;padding:0.1rem 0.35rem;border-radius:3px;color:var(--sky)';
+      if (!byLetter[l]) { btn.style.color = '#bbb'; btn.disabled = true; }
+      else btn.addEventListener('click', () => showLetter(l));
+      bar.appendChild(btn);
+    });
+
+    const list = document.createElement('div');
+    list.id = 'topics-alpha-list';
+    output.innerHTML = '';
+    output.appendChild(bar);
+    output.appendChild(list);
+    showLetter(topicsActiveLetter);
+  }
+
+  function renderMode() {
+    if (topicsSort === 'name') renderAlpha(); else renderFrequency();
+  }
+  renderMode();
 }
 
 // ---- Trends view ----
@@ -778,8 +839,23 @@ function renderTrends(container) {
     '#9b8ec4', '#c49a6a', '#6bc4a8', '#c46b8b', '#6b8bc4',
   ];
 
+  // Aggregate monthly series into annual
+  const annualDates = [...new Set(trends.dates.map(d => d.substring(0, 4)))].sort();
+  const annualSeries = {};
+  trends.topics.forEach(topic => {
+    const monthly = trends.series[topic] || {};
+    annualSeries[topic] = {};
+    annualDates.forEach(year => {
+      let total = 0;
+      Object.entries(monthly).forEach(([month, count]) => {
+        if (month.startsWith(year)) total += count;
+      });
+      if (total > 0) annualSeries[topic][year] = total;
+    });
+  });
+
   const controls = document.getElementById('trend-controls');
-  const selectedTopics = new Set(trends.topics.slice(0, 5));
+  const selectedTopics = new Set(trends.topics.slice(0, 2));
 
   function renderControls() {
     controls.innerHTML = '';
@@ -804,10 +880,9 @@ function renderTrends(container) {
     const datasets = [];
     let i = 0;
     selectedTopics.forEach(topic => {
-      const series = trends.series[topic] || {};
       datasets.push({
         label: topic,
-        data: trends.dates.map(d => series[d] || 0),
+        data: annualDates.map(y => annualSeries[topic]?.[y] || 0),
         backgroundColor: colors[i % colors.length] + 'cc',
         borderColor: colors[i % colors.length],
         borderWidth: 1,
@@ -817,7 +892,7 @@ function renderTrends(container) {
 
     trendChart = new Chart(ctx, {
       type: 'bar',
-      data: { labels: trends.dates, datasets },
+      data: { labels: annualDates, datasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -826,19 +901,16 @@ function renderTrends(container) {
           x: {
             stacked: true,
             ticks: {
-              maxRotation: 45,
+              maxRotation: 0,
               callback: function(val, idx) {
-                // Show only year labels to reduce clutter
-                const label = this.getLabelForValue(idx);
-                return label.endsWith('-01') ? label.substring(0, 4) : '';
+                const year = parseInt(this.getLabelForValue(idx));
+                return year % 5 === 0 ? year : '';
               }
             }
           },
           y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Articles' } }
         },
-        plugins: {
-          legend: { position: 'top' },
-        }
+        plugins: { legend: { position: 'top' } }
       }
     });
   }
