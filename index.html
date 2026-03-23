@@ -766,10 +766,15 @@ function renderTopics(container) {
     output.appendChild(cloud);
   }
 
+  function topicSortKey(name) {
+    // Strip leading Spanish/English articles so "El Rinconcito" sorts under R, etc.
+    return name.replace(/^(El |La |Los |Las |The )/i, '').toUpperCase();
+  }
+
   function renderAlpha() {
     const byLetter = {};
     sorted.forEach(([name, count]) => {
-      const letter = name[0].toUpperCase();
+      const letter = topicSortKey(name)[0];
       if (!byLetter[letter]) byLetter[letter] = [];
       byLetter[letter].push([name, count]);
     });
@@ -784,7 +789,7 @@ function renderTopics(container) {
       });
       const list = document.getElementById('topics-alpha-list');
       list.innerHTML = '';
-      (byLetter[l] || []).sort((a, b) => a[0] < b[0] ? -1 : 1).forEach(([name, count]) => {
+      (byLetter[l] || []).sort((a, b) => topicSortKey(a[0]) < topicSortKey(b[0]) ? -1 : 1).forEach(([name, count]) => {
         const row = document.createElement('div');
         row.className = 'alpha-row';
         row.innerHTML = `<span>${escapeHtml(name)}</span><span class="meta">${count} article${count !== 1 ? 's' : ''}</span>`;
