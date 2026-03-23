@@ -479,7 +479,14 @@ function renderSearch(container, prefill = '') {
   filter.addEventListener('change', doSearch);
   boilerplateToggle.addEventListener('change', doSearch);
 
-  if (prefill || searchQuery) doSearch();
+  if (topicFilter) {
+    // Topic-tag mode: filter by exact tag, don't clear topicFilter
+    filterType = filter.value;
+    hideBoilerplate = boilerplateToggle.checked;
+    performSearch(searchQuery, filterType);
+  } else if (prefill || searchQuery) {
+    doSearch();
+  }
 }
 
 function performSearch(query, type) {
