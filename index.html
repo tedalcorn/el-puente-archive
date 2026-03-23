@@ -382,6 +382,8 @@ let hideBoilerplate = true; // hide classifieds, sponsors, mastheads by default
 let topicFilter = null;  // when set, search filters by exact topic tag
 let personFilter = null; // when set, search filters by exact person tag
 let searchGeneration = 0; // incremented each renderSearch call; stale debounces bail out
+let peopleSort = 'name';       // persists across tab switches
+let peopleActiveLetter = 'A';  // persists across tab switches — restores letter on return
 
 const BOILERPLATE_TYPES = new Set(['classified', 'sponsor', 'masthead']);
 
@@ -585,17 +587,15 @@ function renderPeople(container) {
     });
   });
 
-  let peopleSort = 'frequency';
-
   container.innerHTML = `
     <div class="search-bar">
       <input type="text" id="people-filter" placeholder="Filter people...">
     </div>
     <div style="margin-bottom:0.4rem;font-size:0.9rem;color:var(--earth)">
       Order by&nbsp;
-      <label style="cursor:pointer"><input type="radio" name="people-sort" value="frequency" checked> frequency of mention</label>
+      <label style="cursor:pointer"><input type="radio" name="people-sort" value="name" ${peopleSort === 'name' ? 'checked' : ''}> last name</label>
       &nbsp;&nbsp;
-      <label style="cursor:pointer"><input type="radio" name="people-sort" value="name"> last name</label>
+      <label style="cursor:pointer"><input type="radio" name="people-sort" value="frequency" ${peopleSort === 'frequency' ? 'checked' : ''}> frequency of mention</label>
     </div>
     <div style="margin-bottom:1rem">
       <label style="font-size:0.9rem;cursor:pointer;color:var(--earth)">
@@ -641,8 +641,6 @@ function renderPeople(container) {
     return name.split(' ').pop().toLowerCase();
   }
 
-  let activeLetter = 'A';
-
   function renderAlpha(entries) {
     // Group by first letter of primary last name
     const byLetter = {};
@@ -653,11 +651,11 @@ function renderPeople(container) {
     });
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
-    // If activeLetter has no entries, pick first available
-    if (!byLetter[activeLetter]) activeLetter = letters.find(l => byLetter[l]) || 'A';
+    // If saved letter has no entries, pick first available
+    if (!byLetter[peopleActiveLetter]) peopleActiveLetter = letters.find(l => byLetter[l]) || 'A';
 
     function showLetter(l) {
-      activeLetter = l;
+      peopleActiveLetter = l; // persist across tab switches
 
       // Update bar highlighting
       document.querySelectorAll('.az-bar button').forEach(btn => {
@@ -702,7 +700,7 @@ function renderPeople(container) {
     output.innerHTML = '';
     output.appendChild(bar);
     output.appendChild(nameList);
-    showLetter(activeLetter);
+    showLetter(peopleActiveLetter);
   }
 
   function render(filter = '') {
