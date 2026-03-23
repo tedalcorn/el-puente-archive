@@ -379,7 +379,8 @@ let currentView = 'search';
 let searchQuery = '';
 let filterType = 'all';
 let hideBoilerplate = true; // hide classifieds, sponsors, mastheads by default
-let topicFilter = null; // when set, search filters by exact topic tag
+let topicFilter = null;  // when set, search filters by exact topic tag
+let personFilter = null; // when set, search filters by exact person tag
 
 const BOILERPLATE_TYPES = new Set(['classified', 'sponsor', 'masthead']);
 
@@ -468,7 +469,8 @@ function renderSearch(container, prefill = '') {
   filter.value = filterType;
 
   const doSearch = () => {
-    topicFilter = null; // user typing clears topic-tag mode
+    topicFilter = null;  // user typing clears topic-tag mode
+    personFilter = null; // user typing clears person-tag mode
     searchQuery = input.value;
     filterType = filter.value;
     hideBoilerplate = boilerplateToggle.checked;
@@ -479,8 +481,8 @@ function renderSearch(container, prefill = '') {
   filter.addEventListener('change', doSearch);
   boilerplateToggle.addEventListener('change', doSearch);
 
-  if (topicFilter) {
-    // Topic-tag mode: filter by exact tag, don't clear topicFilter
+  if (topicFilter || personFilter) {
+    // Tag-filter mode: filter by exact tag, don't clear the filter
     filterType = filter.value;
     hideBoilerplate = boilerplateToggle.checked;
     performSearch(searchQuery, filterType);
@@ -504,6 +506,9 @@ function performSearch(query, type) {
   if (topicFilter) {
     const tf = topicFilter.toLowerCase();
     matches = matches.filter(a => a.topics.some(t => t.toLowerCase() === tf));
+  } else if (personFilter) {
+    const pf = personFilter.toLowerCase();
+    matches = matches.filter(a => a.people.some(p => p.toLowerCase() === pf));
   } else if (query.trim()) {
     const terms = query.toLowerCase().split(/\s+/);
     matches = matches.filter(a => {
@@ -998,6 +1003,7 @@ function renderIssues(container) {
 function searchPerson(name) {
   document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
   document.querySelector('[data-view="search"]').classList.add('active');
+  personFilter = name;
   searchQuery = name;
   filterType = 'all';
   renderSearch(document.getElementById('main'), name);
