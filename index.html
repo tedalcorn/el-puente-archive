@@ -381,6 +381,7 @@ let filterType = 'all';
 let hideBoilerplate = true; // hide classifieds, sponsors, mastheads by default
 let topicFilter = null;  // when set, search filters by exact topic tag
 let personFilter = null; // when set, search filters by exact person tag
+let searchGeneration = 0; // incremented each renderSearch call; stale debounces bail out
 
 const BOILERPLATE_TYPES = new Set(['classified', 'sponsor', 'masthead']);
 
@@ -438,6 +439,8 @@ function showView(view) {
 
 // ---- Search view ----
 function renderSearch(container, prefill = '') {
+  const myGeneration = ++searchGeneration; // stale-debounce guard
+
   container.innerHTML = `
     <div class="search-bar">
       <input type="text" id="search-input" placeholder="Search articles, people, topics..." value="${escapeHtml(prefill || searchQuery)}">
@@ -469,6 +472,7 @@ function renderSearch(container, prefill = '') {
   filter.value = filterType;
 
   const doSearch = () => {
+    if (searchGeneration !== myGeneration) return; // this render was replaced; ignore
     topicFilter = null;  // user typing clears topic-tag mode
     personFilter = null; // user typing clears person-tag mode
     searchQuery = input.value;
