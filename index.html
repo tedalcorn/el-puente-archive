@@ -514,15 +514,9 @@ function performSearch(query, type) {
 
   results.innerHTML = `<div class="result-count">${matches.length} result${matches.length !== 1 ? 's' : ''}</div>`;
 
-  // Show max 100 results
-  const shown = matches.slice(0, 100);
-  shown.forEach(a => {
+  matches.forEach(a => {
     results.appendChild(createArticleCard(a, query));
   });
-
-  if (matches.length > 100) {
-    results.innerHTML += `<div class="result-count">Showing first 100 of ${matches.length} results. Refine your search to see more.</div>`;
-  }
 }
 
 function createArticleCard(article, highlight = '') {
