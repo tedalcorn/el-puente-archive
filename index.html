@@ -638,7 +638,9 @@ function renderPeople(container) {
   function primaryLast(name) {
     // For Spanish compound surnames (e.g. "Ortiz y Pino"), sort by the word before " y "
     if (name.includes(' y ')) return name.split(' y ')[0].split(' ').pop().toLowerCase();
-    return name.split(' ').pop().toLowerCase();
+    // Strip generational/Roman numeral suffixes before finding last name
+    const stripped = name.replace(/\s+(II|III|IV|V|Jr\.?|Sr\.)$/i, '').trim();
+    return stripped.split(' ').pop().toLowerCase();
   }
 
   function renderAlpha(entries) {
