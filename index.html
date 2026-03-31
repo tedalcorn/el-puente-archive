@@ -636,10 +636,15 @@ function renderPeople(container) {
   }
 
   function primaryLast(name) {
-    // For Spanish compound surnames (e.g. "Ortiz y Pino"), sort by the word before " y "
-    if (name.includes(' y ')) return name.split(' y ')[0].split(' ').pop().toLowerCase();
-    // Strip generational/Roman numeral suffixes before finding last name
-    const stripped = name.replace(/\s+(II|III|IV|V|Jr\.?|Sr\.)$/i, '').trim();
+    // Strip trailing parentheticals e.g. "(Remy)", "(Grande)"
+    const noParens = name.replace(/\s*\([^)]*\)\s*$/, '').trim();
+    // Strip generational suffixes
+    const stripped = noParens.replace(/\s+(II|III|IV|V|Jr\.?|Sr\.)$/i, '').trim();
+    // Spanish compound surnames (e.g. "Concha Ortiz y Pino") — sort by word before " y "
+    if (stripped.includes(' y ')) return stripped.split(' y ')[0].split(' ').pop().toLowerCase();
+    // Royal "of" names (e.g. "King Hussein of Jordan") — sort by word before " of "
+    if (stripped.includes(' of ')) return stripped.split(' of ')[0].split(' ').pop().toLowerCase();
+    // Standard: last word is the last name
     return stripped.split(' ').pop().toLowerCase();
   }
 
