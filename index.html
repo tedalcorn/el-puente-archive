@@ -567,7 +567,7 @@ function createArticleCard(article, highlight = '') {
 
   card.innerHTML = `
     <div class="meta">
-      <span class="issue-link" onclick="searchByIssue('${article.issue_numbers}')">Issue #${article.issue_numbers}</span>
+      <span class="issue-link" onclick="searchByIssue('${escapeAttr(article.issue_numbers)}')">Issue #${article.issue_numbers}</span>
       <span>${article.date_string || ''}</span>
       <span class="tag tag-section">${article.section_type}</span>
     </div>
@@ -650,7 +650,7 @@ function renderPeople(container) {
   function renderFrequency(entries) {
     const grid = document.createElement('div');
     grid.className = 'people-grid';
-    entries.slice(0, 300).forEach(([name, data]) => {
+    entries.slice(0, 400).forEach(([name, data]) => {
       const card = document.createElement('div');
       card.className = 'person-card';
       const yr = yearRange(data);
