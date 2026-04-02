@@ -25,22 +25,34 @@
   }
 
   header {
-    background: var(--ink);
-    color: var(--sand);
-    padding: 1.5rem 2rem;
+    background: var(--paper);
     text-align: center;
+    padding-bottom: 0.75rem;
+    border-bottom: 3px solid var(--earth);
   }
 
-  header h1 {
-    font-size: 2rem;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.25rem;
+  .masthead-img {
+    display: block;
+    width: 100%;
+    max-width: 450px;
+    margin: 0 auto;
   }
 
-  header p {
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  header .subtitle {
     font-style: italic;
-    opacity: 0.8;
+    color: var(--earth);
     font-size: 0.95rem;
+    margin-top: 0.1rem;
   }
 
   nav {
@@ -349,8 +361,9 @@
 <body>
 
 <header>
-  <h1>EL PUENTE DE GALISTEO</h1>
-  <p>Community newsletter archive, 1997&ndash;2026</p>
+  <img src="masthead.png" alt="El Puente de Galisteo" class="masthead-img">
+  <h1 class="visually-hidden">El Puente de Galisteo</h1>
+  <p class="subtitle">1997&ndash;2026</p>
 </header>
 
 <nav id="nav">
@@ -429,6 +442,7 @@ document.getElementById('nav').addEventListener('click', (e) => {
 function showView(view) {
   currentView = view;
   const main = document.getElementById('main');
+  document.getElementById('stats-bar').style.display = view === 'search' ? '' : 'none';
 
   switch(view) {
     case 'search': renderSearch(main); break;
