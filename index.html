@@ -443,6 +443,7 @@ function showView(view) {
   currentView = view;
   const main = document.getElementById('main');
   document.getElementById('stats-bar').style.display = view === 'search' ? '' : 'none';
+  window.scrollTo(0, 0);
 
   switch(view) {
     case 'search': renderSearch(main); break;
@@ -565,8 +566,8 @@ function createArticleCard(article, highlight = '') {
     </div>
     <h3>${displayTitle}</h3>
     ${article.byline ? `<div style="font-style:italic;color:var(--earth);font-size:0.9rem;margin-bottom:0.4rem">By ${escapeHtml(article.byline)}</div>` : ''}
-    <div class="body-preview" id="body-${article.id}">${displayBody}${article.body && article.body.length > 400 ? '...' : ''}</div>
-    ${article.body && article.body.length > 400 ? `<span class="toggle-body" onclick="toggleBody(${article.id})">Show more</span>` : ''}
+    <div class="body-preview" id="body-${article.id}">${displayBody}${article.body && article.body.length > 150 ? '...' : ''}</div>
+    ${article.body && article.body.length > 150 ? `<span class="toggle-body" onclick="toggleBody(${article.id})">Show more</span>` : ''}
     <div style="margin-top:0.5rem">
       ${article.people.map(p => `<span class="tag tag-person" onclick="searchPerson('${escapeAttr(p)}')">${escapeHtml(p)}</span>`).join('')}
       ${article.topics.map(t => `<span class="tag tag-topic" onclick="searchTopic('${escapeAttr(t)}')">${escapeHtml(t)}</span>`).join('')}
@@ -1035,6 +1036,7 @@ function searchPerson(name) {
   topicFilter = null;
   searchQuery = name;
   filterType = 'all';
+  window.scrollTo(0, 0);
   renderSearch(document.getElementById('main'), name);
 }
 
@@ -1045,6 +1047,7 @@ function searchTopic(name) {
   personFilter = null;
   searchQuery = name;
   filterType = 'all';
+  window.scrollTo(0, 0);
   renderSearch(document.getElementById('main'), name);
 }
 
@@ -1052,6 +1055,7 @@ function searchByIssue(issueNums) {
   document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
   document.querySelector('[data-view="search"]').classList.add('active');
   currentView = 'search';
+  window.scrollTo(0, 0);
 
   const main = document.getElementById('main');
   main.innerHTML = `
