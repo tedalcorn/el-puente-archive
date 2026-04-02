@@ -1032,6 +1032,7 @@ function searchPerson(name) {
   document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
   document.querySelector('[data-view="search"]').classList.add('active');
   personFilter = name;
+  topicFilter = null;
   searchQuery = name;
   filterType = 'all';
   renderSearch(document.getElementById('main'), name);
@@ -1041,6 +1042,7 @@ function searchTopic(name) {
   document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
   document.querySelector('[data-view="search"]').classList.add('active');
   topicFilter = name;
+  personFilter = null;
   searchQuery = name;
   filterType = 'all';
   renderSearch(document.getElementById('main'), name);
