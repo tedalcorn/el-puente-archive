@@ -361,7 +361,7 @@
 </head>
 <body>
 
-<header>
+<header onclick="navTo('search')" style="cursor:pointer">
   <img src="masthead.png" alt="El Puente de Galisteo" class="masthead-img">
   <h1 class="visually-hidden">El Puente de Galisteo</h1>
   <p class="subtitle">Newsletter Archive (1997&ndash;2026)</p>
@@ -438,6 +438,13 @@ document.getElementById('nav').addEventListener('click', (e) => {
     showView(e.target.dataset.view);
   }
 });
+
+function navTo(view) {
+  document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
+  const btn = document.querySelector(`[data-view="${view}"]`);
+  if (btn) btn.classList.add('active');
+  showView(view);
+}
 
 function showView(view) {
   currentView = view;
