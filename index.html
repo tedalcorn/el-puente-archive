@@ -466,9 +466,11 @@ function renderSearch(container, prefill = '') {
         <option value="editorial">Editorials</option>
         <option value="pedacito">Pedacitos</option>
         <option value="obituary">Obituaries</option>
-        <option value="gca_report">GCA Reports</option>
+        <option value="how_we_met">How We Met</option>
+        <option value="dichos">Dichos y Cuentos</option>
+        <option value="gca_report">GCA &amp; Water Reports</option>
         <option value="fire_dept">Fire Dept</option>
-        <option value="church_news">Church News</option>
+        <option value="calendar">Calendar</option>
         <option value="letter">Letters</option>
         <option value="classified">Classifieds</option>
       </select>
@@ -499,7 +501,10 @@ function renderSearch(container, prefill = '') {
 
   input.addEventListener('input', debounce(doSearch, 300));
   filter.addEventListener('change', doSearch);
-  boilerplateToggle.addEventListener('change', doSearch);
+  boilerplateToggle.addEventListener('change', () => {
+    hideBoilerplate = boilerplateToggle.checked;
+    performSearch(searchQuery, filterType);
+  });
 
   if (topicFilter || personFilter) {
     // Tag-filter mode: filter by exact tag, don't clear the filter
