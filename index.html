@@ -643,6 +643,8 @@ function renderPeople(container) {
       <label style="cursor:pointer"><input type="radio" name="people-sort" value="name" ${peopleSort === 'name' ? 'checked' : ''}> last name</label>
       &nbsp;&nbsp;
       <label style="cursor:pointer"><input type="radio" name="people-sort" value="frequency" ${peopleSort === 'frequency' ? 'checked' : ''}> frequency of mention</label>
+      &nbsp;&nbsp;
+      <label style="cursor:pointer"><input type="radio" name="people-sort" value="bylines" ${peopleSort === 'bylines' ? 'checked' : ''}> bylines</label>
     </div>
     <div style="margin-bottom:1rem">
       <label style="font-size:0.9rem;cursor:pointer;color:var(--earth)">
@@ -783,7 +785,62 @@ function renderPeople(container) {
     output.appendChild(nameList);
   }
 
+  function renderBylines() {
+    // Group articles by byline author
+    const byAuthor = {};
+    DATA.articles.forEach(a => {
+      if (!a.byline) return;
+      if (!byAuthor[a.byline]) byAuthor[a.byline] = [];
+      byAuthor[a.byline].push(a);
+    });
+    const authors = Object.entries(byAuthor).sort((a, b) => b[1].length - a[1].length);
+
+    let selectedAuthor = null;
+
+    function showArticles(name, articles) {
+      selectedAuthor = name;
+      renderList();
+    }
+
+    function renderList() {
+      output.innerHTML = '';
+      const list = document.createElement('div');
+      authors.forEach(([name, arts]) => {
+        const row = document.createElement('div');
+        row.className = 'alpha-row';
+        const isSelected = name === selectedAuthor;
+        row.style.cssText = isSelected ? 'background:var(--sand-light, #fdf6ee);border-radius:4px;' : '';
+        row.innerHTML = `<span style="font-weight:${isSelected ? 'bold' : 'normal'}">${escapeHtml(name)}</span><span class="meta">${arts.length} article${arts.length !== 1 ? 's' : ''}</span>`;
+        row.onclick = () => {
+          selectedAuthor = isSelected ? null : name;
+          renderList();
+        };
+        list.appendChild(row);
+
+        if (isSelected) {
+          const panel = document.createElement('div');
+          panel.style.cssText = 'margin:0.3rem 0 0.8rem 1rem;border-left:2px solid var(--earth);padding-left:0.8rem';
+          arts.sort((a, b) => (a.sort_date || '').localeCompare(b.sort_date || '')).forEach(a => {
+            const item = document.createElement('div');
+            item.style.cssText = 'padding:0.25rem 0;font-size:0.9rem';
+            const dateStr = a.date_string ? a.date_string.replace(/-/g, ' ') : '';
+            item.innerHTML = `<span style="color:var(--earth);font-size:0.8rem;margin-right:0.5rem">${escapeHtml(dateStr)}</span><a href="${escapeHtml(a.pdf_url || '')}" target="_blank" style="color:var(--ink);text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${escapeHtml(a.title)}</a>`;
+            panel.appendChild(item);
+          });
+          list.appendChild(panel);
+        }
+      });
+      output.appendChild(list);
+      if (!authors.length) {
+        output.innerHTML = '<p style="color:var(--earth);font-size:0.9rem">No bylines found.</p>';
+      }
+    }
+
+    renderList();
+  }
+
   function render(filter = '') {
+    if (peopleSort === 'bylines') { renderBylines(); return; }
     let entries = Object.entries(peopleData);
     if (filter) entries = entries.filter(([name]) => name.toLowerCase().includes(filter.toLowerCase()));
     if (peopleSort === 'name' && filter) {
