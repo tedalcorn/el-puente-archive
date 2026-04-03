@@ -565,16 +565,20 @@ function createArticleCard(article, highlight = '') {
   const displayBody = highlight ? highlightText(bodyPreview, highlight) : escapeHtml(bodyPreview);
   const displayTitle = highlight ? highlightText(article.title || 'Untitled', highlight) : escapeHtml(article.title || 'Untitled');
 
+  const sourcePdf = article.pdf_url
+    ? `<a href="${escapeAttr(article.pdf_url)}" target="_blank" rel="noopener" style="color:#888;font-size:0.78rem;text-decoration:none;border:1px solid #ccc;border-radius:3px;padding:0.1rem 0.4rem;white-space:nowrap" title="View original PDF">Source</a>`
+    : '';
   card.innerHTML = `
     <div class="meta">
       <span class="issue-link" onclick="searchByIssue('${escapeAttr(article.issue_numbers)}')">Issue #${article.issue_numbers}</span>
       <span>${article.date_string || ''}</span>
       <span class="tag tag-section">${article.section_type}</span>
+      ${sourcePdf}
     </div>
     <h3>${displayTitle}</h3>
     ${article.byline ? `<div style="font-style:italic;color:var(--earth);font-size:0.9rem;margin-bottom:0.4rem">By ${escapeHtml(article.byline)}</div>` : ''}
     <div class="body-preview" id="body-${article.id}">${displayBody}${article.body && article.body.length > 150 ? '...' : ''}</div>
-    ${article.body && article.body.length > 150 ? `<span class="toggle-body" onclick="toggleBody(${article.id})">Show more</span>` : ''}
+    ${article.body && article.body.length > 150 ? `<span class="toggle-body" onclick="toggleBody(${article.id}, ${JSON.stringify(highlight)})">Show more</span>` : ''}
     <div style="margin-top:0.5rem">
       ${article.people.map(p => `<span class="tag tag-person" onclick="searchPerson('${escapeAttr(p)}')">${escapeHtml(p)}</span>`).join('')}
       ${article.topics.map(t => `<span class="tag tag-topic" onclick="searchTopic('${escapeAttr(t)}')">${escapeHtml(t)}</span>`).join('')}
@@ -583,16 +587,17 @@ function createArticleCard(article, highlight = '') {
   return card;
 }
 
-function toggleBody(id) {
+function toggleBody(id, highlight) {
   const el = document.getElementById(`body-${id}`);
   const article = DATA.articleMap[id];
   if (el.classList.contains('expanded')) {
     el.classList.remove('expanded');
-    el.innerHTML = escapeHtml(article.body.substring(0, 400)) + '...';
+    const bodyPreview = article.body ? article.body.substring(0, 400) : '';
+    el.innerHTML = (highlight ? highlightText(bodyPreview, highlight) : escapeHtml(bodyPreview)) + '...';
     el.nextElementSibling.textContent = 'Show more';
   } else {
     el.classList.add('expanded');
-    el.innerHTML = escapeHtml(article.body);
+    el.innerHTML = bodyToHtml(article.body, highlight);
     el.nextElementSibling.textContent = 'Show less';
   }
 }
@@ -1094,6 +1099,32 @@ function highlightText(text, query) {
 function escapeHtml(str) {
   if (!str) return '';
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Convert body text to HTML: \n\n → paragraph breaks, \n → line breaks.
+// Optionally highlights query terms (applied after escaping).
+function bodyToHtml(text, highlight) {
+  if (!text) return '';
+  const paras = text.split(/\n\n+/);
+  return paras.map(para => {
+    const lines = para.split('\n').map(line => {
+      let escaped = escapeHtml(line);
+      if (highlight && highlight.trim()) escaped = applyHighlight(escaped, highlight);
+      return escaped;
+    });
+    return '<p style="margin:0 0 0.75em 0">' + lines.join('<br>') + '</p>';
+  }).join('');
+}
+
+// Apply highlight to already-escaped HTML text.
+function applyHighlight(escapedText, query) {
+  const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 1);
+  let result = escapedText;
+  terms.forEach(term => {
+    const regex = new RegExp('(' + escapeRegex(escapeHtml(term)) + ')', 'gi');
+    result = result.replace(regex, '<span class="highlight">$1</span>');
+  });
+  return result;
 }
 
 function escapeAttr(str) {
