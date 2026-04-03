@@ -200,6 +200,22 @@
   @media (max-width: 650px) { .year-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 400px) { .year-grid { grid-template-columns: 1fr; } }
 
+  /* Recent issues row */
+  .recent-issues { margin: 0.6rem 0 1.2rem; }
+  .recent-issues-label { font-size: 0.82rem; color: var(--earth); margin-bottom: 0.5rem; font-family: Georgia, serif; letter-spacing: 0.02em; }
+  .recent-issues-row { display: flex; gap: 0.65rem; overflow-x: auto; padding-bottom: 4px; }
+  .issue-thumb {
+    flex: 0 0 auto; min-width: 110px; max-width: 140px;
+    background: var(--paper); border: 1px solid var(--tan); border-radius: 5px;
+    padding: 0.55rem 0.75rem; text-decoration: none; color: var(--ink);
+    transition: background 0.15s; display: block;
+  }
+  .issue-thumb:hover { background: #ede3d4; }
+  .issue-thumb .ith-num { font-size: 0.7rem; color: var(--earth); margin-bottom: 0.1rem; }
+  .issue-thumb .ith-date { font-size: 0.88rem; font-weight: 600; line-height: 1.2; }
+  .issue-thumb .ith-count { font-size: 0.72rem; color: var(--earth); margin-top: 0.2rem; }
+  @media (max-width: 500px) { .recent-issues-row { gap: 0.5rem; } .issue-thumb { min-width: 90px; } }
+
   /* View: People */
   .people-grid {
     display: grid;
@@ -489,8 +505,23 @@ function renderSearch(container, prefill = '') {
         Hide classifieds, sponsors &amp; mastheads
       </label>
     </div>
+    <div id="recent-issues-row"></div>
     <div id="results"></div>
   `;
+
+  // Recent issues thumbnails (4 most recent, hidden while searching)
+  const recentIssues = DATA.issues.slice(-4).reverse();
+  document.getElementById('recent-issues-row').innerHTML = `
+    <div class="recent-issues">
+      <div class="recent-issues-label">Recent issues</div>
+      <div class="recent-issues-row">${recentIssues.map(iss => `
+        <a class="issue-thumb" href="${escapeHtml(iss.pdf_url)}" target="_blank">
+          <div class="ith-num">No.\u00a0${escapeHtml(iss.issue_numbers)}</div>
+          <div class="ith-date">${escapeHtml(iss.date_string.replace(/-/g, '\u00a0'))}</div>
+          <div class="ith-count">${iss.article_count} articles</div>
+        </a>`).join('')}
+      </div>
+    </div>`;
 
   const input = document.getElementById('search-input');
   const filter = document.getElementById('filter-type');
@@ -504,6 +535,8 @@ function renderSearch(container, prefill = '') {
     searchQuery = input.value;
     filterType = filter.value;
     hideBoilerplate = boilerplateToggle.checked;
+    const recentRow = document.getElementById('recent-issues-row');
+    if (recentRow) recentRow.style.display = searchQuery ? 'none' : '';
     performSearch(searchQuery, filterType);
   };
 
@@ -786,10 +819,12 @@ function renderPeople(container) {
   }
 
   function renderBylines() {
-    // Group articles by byline author
+    // Group articles by byline author; exclude How We Met
     const byAuthor = {};
     DATA.articles.forEach(a => {
       if (!a.byline) return;
+      if (a.section_type === 'how_we_met') return;
+      if (a.title && a.title.toLowerCase().includes('how we met')) return;
       if (!byAuthor[a.byline]) byAuthor[a.byline] = [];
       byAuthor[a.byline].push(a);
     });
