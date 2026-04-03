@@ -533,7 +533,21 @@ function performSearch(query, type) {
   }
 
   if (type !== 'all') {
-    matches = matches.filter(a => a.section_type === type);
+    // Some section types weren't in the original segmentation prompt, so articles
+    // may have been classified as 'feature'/'other'. Fall back to title matching.
+    const TITLE_FALLBACK = {
+      'dichos':    'dichos',
+      'how_we_met': 'how we met',
+    };
+    if (TITLE_FALLBACK[type]) {
+      const phrase = TITLE_FALLBACK[type];
+      matches = matches.filter(a =>
+        a.section_type === type ||
+        (a.title && a.title.toLowerCase().includes(phrase))
+      );
+    } else {
+      matches = matches.filter(a => a.section_type === type);
+    }
   }
 
   if (topicFilter) {
@@ -578,7 +592,7 @@ function createArticleCard(article, highlight = '') {
     <h3>${displayTitle}</h3>
     ${article.byline ? `<div style="font-style:italic;color:var(--earth);font-size:0.9rem;margin-bottom:0.4rem">By ${escapeHtml(article.byline)}</div>` : ''}
     <div class="body-preview" id="body-${article.id}">${displayBody}${article.body && article.body.length > 150 ? '...' : ''}</div>
-    ${article.body && article.body.length > 150 ? `<span class="toggle-body" onclick="toggleBody(${article.id}, ${JSON.stringify(highlight)})">Show more</span>` : ''}
+    ${article.body && article.body.length > 150 ? `<span class="toggle-body" onclick="toggleBody(${article.id})">Show more</span>` : ''}
     <div style="margin-top:0.5rem">
       ${article.people.map(p => `<span class="tag tag-person" onclick="searchPerson('${escapeAttr(p)}')">${escapeHtml(p)}</span>`).join('')}
       ${article.topics.map(t => `<span class="tag tag-topic" onclick="searchTopic('${escapeAttr(t)}')">${escapeHtml(t)}</span>`).join('')}
@@ -587,17 +601,18 @@ function createArticleCard(article, highlight = '') {
   return card;
 }
 
-function toggleBody(id, highlight) {
+function toggleBody(id) {
   const el = document.getElementById(`body-${id}`);
   const article = DATA.articleMap[id];
+  const hl = searchQuery; // use current search query for highlighting
   if (el.classList.contains('expanded')) {
     el.classList.remove('expanded');
     const bodyPreview = article.body ? article.body.substring(0, 400) : '';
-    el.innerHTML = (highlight ? highlightText(bodyPreview, highlight) : escapeHtml(bodyPreview)) + '...';
+    el.innerHTML = (hl ? highlightText(bodyPreview, hl) : escapeHtml(bodyPreview)) + '...';
     el.nextElementSibling.textContent = 'Show more';
   } else {
     el.classList.add('expanded');
-    el.innerHTML = bodyToHtml(article.body, highlight);
+    el.innerHTML = bodyToHtml(article.body, hl);
     el.nextElementSibling.textContent = 'Show less';
   }
 }
@@ -742,10 +757,38 @@ function renderPeople(container) {
     showLetter(peopleActiveLetter);
   }
 
+  function renderFilteredFlat(entries) {
+    // When typing a search, show all matches in a flat alphabetical list
+    // rather than grouping by active letter
+    entries.sort((a, b) => {
+      const lA = primaryLast(a[0]), lB = primaryLast(b[0]);
+      return lA < lB ? -1 : lA > lB ? 1 : a[0] < b[0] ? -1 : 1;
+    });
+    const nameList = document.createElement('div');
+    entries.slice(0, 300).forEach(([name, data]) => {
+      const row = document.createElement('div');
+      row.className = 'alpha-row';
+      const yr = yearRange(data);
+      row.innerHTML = `<span>${escapeHtml(name)}</span><span class="meta">${data.count} mention${data.count !== 1 ? 's' : ''}${yr ? ' &middot; ' + yr : ''}</span>`;
+      row.onclick = () => searchPerson(name);
+      nameList.appendChild(row);
+    });
+    if (entries.length > 300) {
+      const note = document.createElement('div');
+      note.style.cssText = 'font-size:0.8rem;color:var(--earth);padding:0.4rem 0.4rem';
+      note.textContent = `Showing 300 of ${entries.length} matches`;
+      nameList.appendChild(note);
+    }
+    output.innerHTML = '';
+    output.appendChild(nameList);
+  }
+
   function render(filter = '') {
     let entries = Object.entries(peopleData);
     if (filter) entries = entries.filter(([name]) => name.toLowerCase().includes(filter.toLowerCase()));
-    if (peopleSort === 'name') {
+    if (peopleSort === 'name' && filter) {
+      renderFilteredFlat(entries); // show all matches across all letters
+    } else if (peopleSort === 'name') {
       renderAlpha(entries);
     } else {
       entries.sort((a, b) => b[1].count - a[1].count);
