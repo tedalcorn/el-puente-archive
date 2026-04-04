@@ -203,18 +203,31 @@
   /* Recent issues row */
   .recent-issues { margin: 0.6rem 0 1.2rem; }
   .recent-issues-label { font-size: 0.82rem; color: var(--earth); margin-bottom: 0.5rem; font-family: Georgia, serif; letter-spacing: 0.02em; }
-  .recent-issues-row { display: flex; gap: 0.65rem; overflow-x: auto; padding-bottom: 4px; }
+  .recent-issues-row { display: flex; gap: 0.75rem; overflow-x: auto; padding-bottom: 4px; }
   .issue-thumb {
-    flex: 0 0 auto; min-width: 110px; max-width: 140px;
+    flex: 0 0 auto; width: 130px;
     background: var(--paper); border: 1px solid var(--tan); border-radius: 5px;
-    padding: 0.55rem 0.75rem; text-decoration: none; color: var(--ink);
-    transition: background 0.15s; display: block;
+    text-decoration: none; color: var(--ink);
+    transition: background 0.15s; display: flex; flex-direction: column;
+    overflow: hidden; cursor: pointer;
   }
   .issue-thumb:hover { background: #ede3d4; }
-  .issue-thumb .ith-num { font-size: 0.7rem; color: var(--earth); margin-bottom: 0.1rem; }
-  .issue-thumb .ith-date { font-size: 0.88rem; font-weight: 600; line-height: 1.2; }
-  .issue-thumb .ith-count { font-size: 0.72rem; color: var(--earth); margin-top: 0.2rem; }
-  @media (max-width: 500px) { .recent-issues-row { gap: 0.5rem; } .issue-thumb { min-width: 90px; } }
+  .issue-thumb .ith-img {
+    width: 100%; display: block; border-bottom: 1px solid var(--tan);
+    background: #e8ddd0;
+  }
+  .issue-thumb .ith-img img { width: 100%; display: block; }
+  .issue-thumb .ith-body { padding: 0.45rem 0.6rem 0.3rem; flex: 1; }
+  .issue-thumb .ith-num { font-size: 0.68rem; color: var(--earth); margin-bottom: 0.1rem; }
+  .issue-thumb .ith-date { font-size: 0.85rem; font-weight: 600; line-height: 1.2; }
+  .issue-thumb .ith-count { font-size: 0.68rem; color: var(--earth); margin-top: 0.15rem; }
+  .issue-thumb .ith-source {
+    display: block; text-align: center; font-size: 0.68rem;
+    padding: 0.25rem 0.5rem; border-top: 1px solid var(--tan);
+    color: var(--earth); text-decoration: none;
+  }
+  .issue-thumb .ith-source:hover { text-decoration: underline; background: rgba(0,0,0,0.04); }
+  @media (max-width: 500px) { .recent-issues-row { gap: 0.5rem; } .issue-thumb { width: 110px; } }
 
   /* View: People */
   .people-grid {
@@ -511,17 +524,36 @@ function renderSearch(container, prefill = '') {
 
   // Recent issues thumbnails (4 most recent, hidden while searching)
   const recentIssues = DATA.issues.slice(-4).reverse();
-  document.getElementById('recent-issues-row').innerHTML = `
+  const recentRow = document.getElementById('recent-issues-row');
+  recentRow.innerHTML = `
     <div class="recent-issues">
       <div class="recent-issues-label">Recent issues</div>
-      <div class="recent-issues-row">${recentIssues.map(iss => `
-        <a class="issue-thumb" href="${escapeHtml(iss.pdf_url)}" target="_blank">
-          <div class="ith-num">No.\u00a0${escapeHtml(iss.issue_numbers)}</div>
-          <div class="ith-date">${escapeHtml(iss.date_string.replace(/-/g, '\u00a0'))}</div>
-          <div class="ith-count">${iss.article_count} articles</div>
-        </a>`).join('')}
+      <div class="recent-issues-row">${recentIssues.map(iss => {
+        const num = iss.issue_numbers.split('-')[0];
+        const thumbSrc = `thumbs/${num}.jpg`;
+        const imgTag = `<div class="ith-img"><img src="${thumbSrc}" alt="Issue ${escapeHtml(iss.issue_numbers)} cover" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`;
+        return `<div class="issue-thumb" data-issue="${escapeHtml(iss.issue_numbers)}">
+          ${imgTag}
+          <div class="ith-body">
+            <div class="ith-num">No.\u00a0${escapeHtml(iss.issue_numbers)}</div>
+            <div class="ith-date">${escapeHtml(iss.date_string.replace(/-/g, '\u00a0'))}</div>
+            <div class="ith-count">${iss.article_count} articles</div>
+          </div>
+          <a class="ith-source" href="${escapeHtml(iss.pdf_url)}" target="_blank" rel="noopener">Source PDF</a>
+        </div>`;
+      }).join('')}
       </div>
     </div>`;
+  // Click on card body (not Source link) → search within that issue
+  recentRow.querySelectorAll('.issue-thumb').forEach(card => {
+    card.addEventListener('click', e => {
+      if (e.target.closest('.ith-source')) return; // let the link handle it
+      const issNum = card.dataset.issue;
+      searchQuery = issNum;
+      filterType = 'all';
+      renderSearch(document.getElementById('main'), issNum);
+    });
+  });
 
   const input = document.getElementById('search-input');
   const filter = document.getElementById('filter-type');
@@ -535,8 +567,8 @@ function renderSearch(container, prefill = '') {
     searchQuery = input.value;
     filterType = filter.value;
     hideBoilerplate = boilerplateToggle.checked;
-    const recentRow = document.getElementById('recent-issues-row');
-    if (recentRow) recentRow.style.display = searchQuery ? 'none' : '';
+    const recentRowEl = document.getElementById('recent-issues-row');
+    if (recentRowEl) recentRowEl.style.display = searchQuery ? 'none' : '';
     performSearch(searchQuery, filterType);
   };
 
