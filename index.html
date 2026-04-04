@@ -209,18 +209,18 @@
     background: var(--paper); border: 1px solid var(--tan); border-radius: 5px;
     text-decoration: none; color: var(--ink);
     transition: background 0.15s; display: flex; flex-direction: column;
-    overflow: hidden; cursor: pointer;
+    overflow: hidden; cursor: pointer; text-align: center;
   }
   .issue-thumb:hover { background: #ede3d4; }
+  .issue-thumb .ith-body { padding: 0.45rem 0.6rem 0.4rem; }
+  .issue-thumb .ith-num { font-size: 0.68rem; color: var(--earth); }
+  .issue-thumb .ith-date { font-size: 0.85rem; font-weight: 600; line-height: 1.3; }
+  .issue-thumb .ith-count { font-size: 0.68rem; color: var(--earth); margin-top: 0.1rem; }
   .issue-thumb .ith-img {
-    width: 100%; display: block; border-bottom: 1px solid var(--tan);
+    width: 100%; display: block; border-top: 1px solid var(--tan);
     background: #e8ddd0;
   }
   .issue-thumb .ith-img img { width: 100%; display: block; }
-  .issue-thumb .ith-body { padding: 0.45rem 0.6rem 0.3rem; flex: 1; }
-  .issue-thumb .ith-num { font-size: 0.68rem; color: var(--earth); margin-bottom: 0.1rem; }
-  .issue-thumb .ith-date { font-size: 0.85rem; font-weight: 600; line-height: 1.2; }
-  .issue-thumb .ith-count { font-size: 0.68rem; color: var(--earth); margin-top: 0.15rem; }
   .issue-thumb .ith-source {
     display: block; text-align: center; font-size: 0.68rem;
     padding: 0.25rem 0.5rem; border-top: 1px solid var(--tan);
@@ -255,7 +255,11 @@
     gap: 0.2rem;
     margin-bottom: 0.75rem;
   }
-  .az-bar a {
+  @media (max-width: 600px) {
+    .az-bar { display: grid; grid-template-columns: repeat(13, 1fr); gap: 0.1rem; }
+    .az-bar button { padding: 0.2rem 0.1rem; font-size: 0.85rem; text-align: center; }
+  }
+  .az-bar a, .az-btn {
     color: var(--sky);
     text-decoration: none;
     font-size: 0.9rem;
@@ -265,6 +269,9 @@
   }
   .az-bar a:hover { background: var(--paper); }
   .az-bar a.empty { color: #bbb; pointer-events: none; }
+  .az-btn { background: none; border: none; cursor: pointer; }
+  .az-btn:hover { background: var(--paper); }
+  .az-btn.disabled { color: #bbb; cursor: default; }
   .alpha-section h4 {
     color: var(--earth);
     font-size: 1.1rem;
@@ -390,7 +397,7 @@
 </head>
 <body>
 
-<header onclick="navTo('search')" style="cursor:pointer">
+<header onclick="goHome()" style="cursor:pointer">
   <img src="masthead.png" alt="El Puente de Galisteo" class="masthead-img">
   <h1 class="visually-hidden">El Puente de Galisteo</h1>
   <p class="subtitle">Newsletter Archive (1997&ndash;2026)</p>
@@ -468,6 +475,13 @@ document.getElementById('nav').addEventListener('click', (e) => {
   }
 });
 
+function goHome() {
+  searchQuery = '';
+  topicFilter = null;
+  personFilter = null;
+  navTo('search');
+}
+
 function navTo(view) {
   document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
   const btn = document.querySelector(`[data-view="${view}"]`);
@@ -533,25 +547,22 @@ function renderSearch(container, prefill = '') {
         const thumbSrc = `thumbs/${num}.jpg`;
         const imgTag = `<div class="ith-img"><img src="${thumbSrc}" alt="Issue ${escapeHtml(iss.issue_numbers)} cover" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`;
         return `<div class="issue-thumb" data-issue="${escapeHtml(iss.issue_numbers)}">
-          ${imgTag}
           <div class="ith-body">
             <div class="ith-num">No.\u00a0${escapeHtml(iss.issue_numbers)}</div>
             <div class="ith-date">${escapeHtml(iss.date_string.replace(/-/g, '\u00a0'))}</div>
             <div class="ith-count">${iss.article_count} articles</div>
           </div>
+          ${imgTag}
           <a class="ith-source" href="${escapeHtml(iss.pdf_url)}" target="_blank" rel="noopener">Source PDF</a>
         </div>`;
       }).join('')}
       </div>
     </div>`;
-  // Click on card body (not Source link) → search within that issue
+  // Click on card body (not Source link) → browse that issue
   recentRow.querySelectorAll('.issue-thumb').forEach(card => {
     card.addEventListener('click', e => {
       if (e.target.closest('.ith-source')) return; // let the link handle it
-      const issNum = card.dataset.issue;
-      searchQuery = issNum;
-      filterType = 'all';
-      renderSearch(document.getElementById('main'), issNum);
+      searchByIssue(card.dataset.issue);
     });
   });
 
@@ -703,13 +714,11 @@ function renderPeople(container) {
     <div class="search-bar">
       <input type="text" id="people-filter" placeholder="Filter people...">
     </div>
-    <div style="margin-bottom:0.4rem;font-size:0.9rem;color:var(--earth)">
-      Order by&nbsp;
-      <label style="cursor:pointer"><input type="radio" name="people-sort" value="name" ${peopleSort === 'name' ? 'checked' : ''}> last name</label>
-      &nbsp;&nbsp;
-      <label style="cursor:pointer"><input type="radio" name="people-sort" value="frequency" ${peopleSort === 'frequency' ? 'checked' : ''}> frequency of mention</label>
-      &nbsp;&nbsp;
-      <label style="cursor:pointer"><input type="radio" name="people-sort" value="bylines" ${peopleSort === 'bylines' ? 'checked' : ''}> bylines</label>
+    <div style="margin-bottom:0.4rem;font-size:0.9rem;color:var(--earth);display:flex;flex-wrap:wrap;align-items:center;gap:0.1rem 0.8rem">
+      <span>Order by</span>
+      <label style="cursor:pointer;white-space:nowrap"><input type="radio" name="people-sort" value="name" ${peopleSort === 'name' ? 'checked' : ''}> last name</label>
+      <label style="cursor:pointer;white-space:nowrap"><input type="radio" name="people-sort" value="frequency" ${peopleSort === 'frequency' ? 'checked' : ''}> mentions</label>
+      <label style="cursor:pointer;white-space:nowrap"><input type="radio" name="people-sort" value="bylines" ${peopleSort === 'bylines' ? 'checked' : ''}> bylines</label>
     </div>
     <div style="margin-bottom:1rem">
       <label style="font-size:0.9rem;cursor:pointer;color:var(--earth)">
@@ -809,8 +818,8 @@ function renderPeople(container) {
       const btn = document.createElement('button');
       btn.textContent = l;
       btn.dataset.letter = l;
-      btn.style.cssText = 'background:none;border:none;cursor:pointer;font-family:Georgia,serif;font-size:0.9rem;padding:0.1rem 0.35rem;border-radius:3px;color:var(--sky)';
-      if (!byLetter[l]) { btn.style.color = '#bbb'; btn.disabled = true; }
+      btn.className = 'az-btn' + (byLetter[l] ? '' : ' disabled');
+      if (!byLetter[l]) btn.disabled = true;
       else btn.addEventListener('click', () => showLetter(l));
       bar.appendChild(btn);
     });
@@ -851,10 +860,12 @@ function renderPeople(container) {
   }
 
   function renderBylines() {
-    // Group articles by byline author; exclude How We Met
+    // Group articles by byline author; exclude How We Met and editors-as-authors
+    const BYLINE_EXCLUDE = new Set(['Lucy Lippard']);
     const byAuthor = {};
     DATA.articles.forEach(a => {
       if (!a.byline) return;
+      if (BYLINE_EXCLUDE.has(a.byline)) return;
       if (a.section_type === 'how_we_met') return;
       if (a.title && a.title.toLowerCase().includes('how we met')) return;
       if (!byAuthor[a.byline]) byAuthor[a.byline] = [];
@@ -1018,8 +1029,8 @@ function renderTopics(container) {
       const btn = document.createElement('button');
       btn.textContent = l;
       btn.dataset.letter = l;
-      btn.style.cssText = 'background:none;border:none;cursor:pointer;font-family:Georgia,serif;font-size:0.9rem;padding:0.1rem 0.35rem;border-radius:3px;color:var(--sky)';
-      if (!byLetter[l]) { btn.style.color = '#bbb'; btn.disabled = true; }
+      btn.className = 'az-btn' + (byLetter[l] ? '' : ' disabled');
+      if (!byLetter[l]) btn.disabled = true;
       else btn.addEventListener('click', () => showLetter(l));
       bar.appendChild(btn);
     });
