@@ -203,7 +203,7 @@
   /* Recent issues row */
   .recent-issues { margin: 0.6rem 0 1.2rem; }
   .recent-issues-label { font-size: 0.82rem; color: var(--earth); margin-bottom: 0.5rem; font-family: Georgia, serif; letter-spacing: 0.02em; }
-  .recent-issues-row { display: flex; gap: 0.75rem; overflow-x: auto; padding-bottom: 4px; }
+  .recent-issues-row { display: flex; gap: 0.75rem; overflow: hidden; padding-bottom: 4px; }
   .issue-thumb {
     flex: 0 0 auto; width: 130px;
     background: var(--paper); border: 1px solid var(--tan); border-radius: 5px;
@@ -626,36 +626,7 @@ function renderSearch(container, prefill = '') {
   `;
 
   renderFeatured();
-
-  // Recent issues thumbnails (4 most recent, hidden while searching)
-  const recentIssues = DATA.issues.slice(-4).reverse();
-  const recentRow = document.getElementById('recent-issues-row');
-  recentRow.innerHTML = `
-    <div class="recent-issues">
-      <div class="recent-issues-label">Recent issues</div>
-      <div class="recent-issues-row">${recentIssues.map(iss => {
-        const num = iss.issue_numbers.split('-')[0];
-        const thumbSrc = `thumbs/${num}.jpg`;
-        const imgTag = `<div class="ith-img"><img src="${thumbSrc}" alt="Issue ${escapeHtml(iss.issue_numbers)} cover" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`;
-        return `<div class="issue-thumb" data-issue="${escapeHtml(iss.issue_numbers)}">
-          <div class="ith-body">
-            <div class="ith-num">No.\u00a0${escapeHtml(iss.issue_numbers)}</div>
-            <div class="ith-date">${escapeHtml(iss.date_string.replace(/-/g, '\u00a0'))}</div>
-            <div class="ith-count">${iss.article_count} articles</div>
-          </div>
-          ${imgTag}
-          <a class="ith-source" href="${escapeHtml(iss.pdf_url)}" target="_blank" rel="noopener">Source PDF</a>
-        </div>`;
-      }).join('')}
-      </div>
-    </div>`;
-  // Click on card body (not Source link) → browse that issue
-  recentRow.querySelectorAll('.issue-thumb').forEach(card => {
-    card.addEventListener('click', e => {
-      if (e.target.closest('.ith-source')) return; // let the link handle it
-      searchByIssue(card.dataset.issue);
-    });
-  });
+  renderRecentIssues();
 
   const input = document.getElementById('search-input');
   const filter = document.getElementById('filter-type');
@@ -692,6 +663,63 @@ function renderSearch(container, prefill = '') {
     doSearch();
   }
 }
+
+// ---- Recent issues row (fills available width, hides what doesn't fit) ----
+function computeRecentCount() {
+  const host = document.getElementById('recent-issues-row');
+  if (!host) return 4;
+  // Use the host's own width — main's padding is already subtracted.
+  const hostWidth = host.clientWidth || document.getElementById('main').clientWidth;
+  const narrow = window.innerWidth <= 500;
+  const thumbW = narrow ? 110 : 130;
+  const gap    = narrow ? 8 : 12;
+  return Math.max(2, Math.floor((hostWidth + gap) / (thumbW + gap)));
+}
+
+function renderRecentIssues() {
+  const host = document.getElementById('recent-issues-row');
+  if (!host) return;
+  const count = computeRecentCount();
+  _lastRecentCount = count;
+  const recent = DATA.issues.slice(-count).reverse();
+  host.innerHTML = `
+    <div class="recent-issues">
+      <div class="recent-issues-label">Recent issues</div>
+      <div class="recent-issues-row">${recent.map(iss => {
+        const num = iss.issue_numbers.split('-')[0];
+        const thumbSrc = `thumbs/${num}.jpg`;
+        const imgTag = `<div class="ith-img"><img src="${thumbSrc}" alt="Issue ${escapeHtml(iss.issue_numbers)} cover" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`;
+        return `<div class="issue-thumb" data-issue="${escapeHtml(iss.issue_numbers)}">
+          <div class="ith-body">
+            <div class="ith-num">No.\u00a0${escapeHtml(iss.issue_numbers)}</div>
+            <div class="ith-date">${escapeHtml(iss.date_string.replace(/-/g, '\u00a0'))}</div>
+            <div class="ith-count">${iss.article_count} articles</div>
+          </div>
+          ${imgTag}
+          <a class="ith-source" href="${escapeHtml(iss.pdf_url)}" target="_blank" rel="noopener">Source PDF</a>
+        </div>`;
+      }).join('')}
+      </div>
+    </div>`;
+  host.querySelectorAll('.issue-thumb').forEach(card => {
+    card.addEventListener('click', e => {
+      if (e.target.closest('.ith-source')) return;
+      searchByIssue(card.dataset.issue);
+    });
+  });
+}
+
+// Debounced resize: only re-lay-out the row when the count would change and
+// we're actually on the search landing (no active query).
+let _lastRecentCount = 0;
+window.addEventListener('resize', debounce(() => {
+  if (currentView !== 'search' || searchQuery) return;
+  const want = computeRecentCount();
+  if (want !== _lastRecentCount) {
+    _lastRecentCount = want;
+    renderRecentIssues();
+  }
+}, 120));
 
 // ---- Featured article (rotates per page load / on demand) ----
 const FEATURED_EXCLUDE = new Set(['classified','sponsor','masthead','calendar','gca_report','fire_dept']);
