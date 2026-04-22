@@ -229,6 +229,94 @@
   .issue-thumb .ith-source:hover { text-decoration: underline; background: rgba(0,0,0,0.04); }
   @media (max-width: 500px) { .recent-issues-row { gap: 0.5rem; } .issue-thumb { width: 110px; } }
 
+  /* Featured article — rotating pick on the search landing */
+  .featured-card {
+    background: var(--paper);
+    border: 1px solid #ddd;
+    border-left: 5px solid var(--clay);
+    border-radius: 6px;
+    padding: 1.4rem 1.6rem 1.25rem;
+    margin: 0.25rem 0 1.25rem;
+  }
+  .featured-kicker {
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--clay);
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+  }
+  .featured-title {
+    font-size: 1.55rem;
+    line-height: 1.25;
+    margin: 0 0 0.35rem;
+    color: var(--ink);
+  }
+  .featured-date {
+    font-size: 1rem;
+    color: var(--earth);
+    margin-bottom: 0.4rem;
+    font-style: italic;
+  }
+  .featured-byline {
+    font-style: italic;
+    color: var(--earth);
+    font-size: 0.9rem;
+    margin-bottom: 0.8rem;
+  }
+  .featured-body {
+    font-size: 1.02rem;
+    line-height: 1.7;
+    color: var(--ink);
+    position: relative;
+  }
+  .featured-body p { margin: 0 0 0.9em 0; }
+  .featured-body p:last-child { margin-bottom: 0; }
+  .featured-body.clamped {
+    max-height: 18em;
+    overflow: hidden;
+    mask-image: linear-gradient(to bottom, #000 75%, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, #000 75%, transparent);
+  }
+  .featured-actions {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+    align-items: center;
+  }
+  .featured-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--earth);
+    background: var(--paper);
+    color: var(--earth);
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: inherit;
+    font-size: 0.88rem;
+    white-space: nowrap;
+  }
+  .featured-btn:hover { background: var(--earth); color: var(--paper); }
+  .featured-btn.primary { background: var(--earth); color: var(--paper); }
+  .featured-btn.primary:hover { background: var(--clay); border-color: var(--clay); }
+  .featured-rotate {
+    margin-left: auto;
+    font-size: 0.82rem;
+    color: var(--sky);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .featured-rotate:hover { text-decoration: underline; }
+  @media (max-width: 600px) {
+    .featured-card { padding: 1.1rem 1.1rem 1rem; }
+    .featured-title { font-size: 1.25rem; }
+    .featured-body { font-size: 0.97rem; }
+    .featured-rotate { margin-left: 0; }
+  }
+
   /* View: People */
   .people-grid {
     display: grid;
@@ -532,9 +620,12 @@ function renderSearch(container, prefill = '') {
         Hide classifieds, sponsors &amp; mastheads
       </label>
     </div>
+    <div id="featured-row"></div>
     <div id="recent-issues-row"></div>
     <div id="results"></div>
   `;
+
+  renderFeatured();
 
   // Recent issues thumbnails (4 most recent, hidden while searching)
   const recentIssues = DATA.issues.slice(-4).reverse();
@@ -580,6 +671,8 @@ function renderSearch(container, prefill = '') {
     hideBoilerplate = boilerplateToggle.checked;
     const recentRowEl = document.getElementById('recent-issues-row');
     if (recentRowEl) recentRowEl.style.display = searchQuery ? 'none' : '';
+    const featuredEl = document.getElementById('featured-row');
+    if (featuredEl) featuredEl.style.display = searchQuery ? 'none' : '';
     performSearch(searchQuery, filterType);
   };
 
@@ -597,6 +690,81 @@ function renderSearch(container, prefill = '') {
     performSearch(searchQuery, filterType);
   } else if (prefill || searchQuery) {
     doSearch();
+  }
+}
+
+// ---- Featured article (rotates per page load / on demand) ----
+const FEATURED_EXCLUDE = new Set(['classified','sponsor','masthead','calendar','gca_report','fire_dept']);
+const FEATURED_MIN_BODY = 250;
+const FEATURED_TRUNCATE = 900; // chars — beyond this we clamp with a Read more
+
+let featuredPool = null;
+let featuredExpanded = false;
+
+function getFeaturedPool() {
+  if (featuredPool) return featuredPool;
+  featuredPool = DATA.articles.filter(a =>
+    !FEATURED_EXCLUDE.has(a.section_type) &&
+    a.title && a.title.trim() &&
+    a.body && a.body.length >= FEATURED_MIN_BODY
+  );
+  return featuredPool;
+}
+
+function pickFeatured() {
+  const pool = getFeaturedPool();
+  if (!pool.length) return null;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function formatFeaturedDate(dateString) {
+  if (!dateString) return '';
+  // "January-1997" or "Summer-1999" → "January 1997" / "Summer 1999"
+  return dateString.replace(/-/g, ' ');
+}
+
+function renderFeatured() {
+  const host = document.getElementById('featured-row');
+  if (!host) return;
+  const a = pickFeatured();
+  if (!a) { host.innerHTML = ''; return; }
+  featuredExpanded = false;
+  renderFeaturedCard(host, a);
+}
+
+function renderFeaturedCard(host, a) {
+  const full = a.body || '';
+  const needsClamp = full.length > FEATURED_TRUNCATE;
+  const bodyHtml = bodyToHtml(full);
+  const date = formatFeaturedDate(a.date_string);
+  const pdf = a.pdf_url
+    ? `<a class="featured-btn primary" href="${escapeAttr(a.pdf_url)}" target="_blank" rel="noopener">See original issue →</a>`
+    : '';
+  const issueBtn = `<button class="featured-btn" onclick="searchByIssue('${escapeAttr(a.issue_numbers)}')">Browse issue #${escapeHtml(a.issue_numbers)}</button>`;
+  const readMore = needsClamp
+    ? `<div style="margin-top:0.6rem"><button class="featured-btn" id="featured-expand">Read more</button></div>`
+    : '';
+  host.innerHTML = `
+    <div class="featured-card">
+      <div class="featured-kicker">Featured from the Archives</div>
+      <h2 class="featured-title">${escapeHtml(a.title || 'Untitled')}</h2>
+      <div class="featured-date">${escapeHtml(date)}</div>
+      ${a.byline ? `<div class="featured-byline">By ${escapeHtml(a.byline)}</div>` : ''}
+      <div class="featured-body${needsClamp ? ' clamped' : ''}" id="featured-body">${bodyHtml}</div>
+      ${readMore}
+      <div class="featured-actions">
+        ${pdf}
+        ${issueBtn}
+        <button class="featured-rotate" onclick="renderFeatured()">Show another →</button>
+      </div>
+    </div>`;
+  const expandBtn = document.getElementById('featured-expand');
+  if (expandBtn) {
+    expandBtn.addEventListener('click', () => {
+      const body = document.getElementById('featured-body');
+      if (body) body.classList.remove('clamped');
+      expandBtn.parentElement.remove();
+    });
   }
 }
 
