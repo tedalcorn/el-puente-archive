@@ -633,6 +633,14 @@ function renderSearch(container, prefill = '') {
   const boilerplateToggle = document.getElementById('hide-boilerplate');
   filter.value = filterType;
 
+  // Hide landing widgets if we're rendering into an active search (typed query
+  // or tag-filter mode). They reappear only via goHome() which clears state.
+  const hasActiveSearch = searchQuery || topicFilter || personFilter || prefill;
+  if (hasActiveSearch) {
+    document.getElementById('featured-row').style.display = 'none';
+    document.getElementById('recent-issues-row').style.display = 'none';
+  }
+
   const doSearch = () => {
     if (searchGeneration !== myGeneration) return; // this render was replaced; ignore
     topicFilter = null;  // user typing clears topic-tag mode
