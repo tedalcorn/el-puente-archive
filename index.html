@@ -145,6 +145,23 @@
     margin-bottom: 0.5rem;
   }
 
+  .article-card h3 .article-title-link {
+    cursor: pointer;
+  }
+  .article-card h3 .article-title-link:hover { text-decoration: underline; }
+
+  .article-card .meta .permalink {
+    color: #888;
+    font-size: 0.78rem;
+    text-decoration: none;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    padding: 0.1rem 0.4rem;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .article-card .meta .permalink:hover { background: var(--paper); color: var(--earth); }
+
   .article-card .body-preview {
     font-size: 0.9rem;
     color: #555;
@@ -547,7 +564,10 @@ async function loadData() {
     `;
     document.getElementById('issue-count').textContent = issues.length;
 
-    showView('search');
+    // Deep-link support: open #article=<id> directly, else default to search.
+    const m = location.hash.match(/^#article=(\d+)/);
+    if (m && DATA.articleMap[parseInt(m[1], 10)]) showArticle(parseInt(m[1], 10));
+    else showView('search');
   } catch (e) {
     document.getElementById('loading').textContent = 'Error loading data. Make sure JSON files are in the same directory.';
     console.error(e);
@@ -557,6 +577,7 @@ async function loadData() {
 // ---- Navigation ----
 document.getElementById('nav').addEventListener('click', (e) => {
   if (e.target.tagName === 'BUTTON') {
+    clearArticleHash();
     document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
     e.target.classList.add('active');
     showView(e.target.dataset.view);
@@ -571,10 +592,89 @@ function goHome() {
 }
 
 function navTo(view) {
+  clearArticleHash();
   document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
   const btn = document.querySelector(`[data-view="${view}"]`);
   if (btn) btn.classList.add('active');
   showView(view);
+}
+
+// ---- Per-article permalinks ----
+// Each article has a stable id; #article=<id> deep-links straight to it.
+function openArticle(id) {
+  // Set the hash (creates a history entry); the hashchange handler renders it.
+  location.hash = 'article=' + id;
+}
+
+function articlePermalink(id) {
+  return location.origin + location.pathname + location.search + '#article=' + id;
+}
+
+function copyArticleLink(id, event) {
+  if (event) event.stopPropagation();
+  const url = articlePermalink(id);
+  const flash = () => {
+    const el = event && event.target;
+    if (!el) return;
+    const orig = el.textContent;
+    el.textContent = 'Copied!';
+    setTimeout(() => { el.textContent = orig; }, 1500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(flash, () => prompt('Copy this link:', url));
+  } else {
+    prompt('Copy this link:', url);
+  }
+}
+
+function clearArticleHash() {
+  // Remove a stale #article= hash without firing hashchange.
+  if (location.hash.startsWith('#article=')) {
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+}
+
+function goBackFromArticle() {
+  if (history.length > 1) history.back();
+  else goHome();
+}
+
+function showArticle(id) {
+  const a = DATA.articleMap && DATA.articleMap[id];
+  const main = document.getElementById('main');
+  document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('stats-bar').style.display = 'none';
+  window.scrollTo(0, 0);
+  if (!a) {
+    main.innerHTML = `
+      <div class="result-count">Article not found.</div>
+      <button class="featured-btn" onclick="goHome()">← Back to search</button>`;
+    return;
+  }
+  currentView = 'article';
+  const sourcePdf = a.pdf_url
+    ? `<a href="${escapeAttr(a.pdf_url)}" target="_blank" rel="noopener" style="color:#888;font-size:0.78rem;text-decoration:none;border:1px solid #ccc;border-radius:3px;padding:0.1rem 0.4rem;white-space:nowrap" title="View original PDF">Source PDF</a>`
+    : '';
+  main.innerHTML = `
+    <div style="margin-bottom:1rem;display:flex;gap:0.6rem;flex-wrap:wrap">
+      <button class="featured-btn" onclick="goBackFromArticle()">← Back</button>
+      <button class="featured-btn" onclick="copyArticleLink(${a.id}, event)">Copy link</button>
+    </div>
+    <div class="article-card">
+      <div class="meta">
+        <span class="issue-link" onclick="searchByIssue('${escapeAttr(a.issue_numbers)}')">Issue #${a.issue_numbers}</span>
+        <span>${a.date_string || ''}</span>
+        <span class="tag tag-section">${a.section_type}</span>
+        ${sourcePdf}
+      </div>
+      <h3>${escapeHtml(a.title || 'Untitled')}</h3>
+      ${a.byline ? `<div style="font-style:italic;color:var(--earth);font-size:0.9rem;margin-bottom:0.4rem">By ${escapeHtml(a.byline)}</div>` : ''}
+      <div class="body-preview expanded">${bodyToHtml(a.body)}</div>
+      <div style="margin-top:0.5rem">
+        ${a.people.map(p => `<span class="tag tag-person" onclick="searchPerson('${escapeAttr(p)}')">${escapeHtml(p)}</span>`).join('')}
+        ${a.topics.map(t => `<span class="tag tag-topic" onclick="searchTopic('${escapeAttr(t)}')">${escapeHtml(t)}</span>`).join('')}
+      </div>
+    </div>`;
 }
 
 function showView(view) {
@@ -791,6 +891,7 @@ function renderFeaturedCard(host, a) {
       <div class="featured-actions">
         ${pdf}
         ${issueBtn}
+        <button class="featured-btn" onclick="copyArticleLink(${a.id}, event)">Copy link</button>
         <button class="featured-rotate" onclick="renderFeatured()">Show another →</button>
       </div>
     </div>`;
@@ -844,6 +945,15 @@ function performSearch(query, type) {
     });
   }
 
+  // Reverse-chronological: newest issues first, so the best/most-recent matches
+  // surface at the top. Tiebreak within a month by id (higher id ≈ later).
+  matches = matches.slice().sort((a, b) => {
+    const da = a.sort_date || '', db = b.sort_date || '';
+    if (da > db) return -1;
+    if (da < db) return 1;
+    return b.id - a.id;
+  });
+
   results.innerHTML = `<div class="result-count">${matches.length} result${matches.length !== 1 ? 's' : ''}</div>`;
 
   matches.forEach(a => {
@@ -868,8 +978,9 @@ function createArticleCard(article, highlight = '') {
       <span>${article.date_string || ''}</span>
       <span class="tag tag-section">${article.section_type}</span>
       ${sourcePdf}
+      <span class="permalink" onclick="copyArticleLink(${article.id}, event)" title="Copy a direct link to this article">🔗 Link</span>
     </div>
-    <h3>${displayTitle}</h3>
+    <h3><span class="article-title-link" onclick="openArticle(${article.id})">${displayTitle}</span></h3>
     ${article.byline ? `<div style="font-style:italic;color:var(--earth);font-size:0.9rem;margin-bottom:0.4rem">By ${escapeHtml(article.byline)}</div>` : ''}
     <div class="body-preview" id="body-${article.id}">${displayBody}${article.body && article.body.length > 150 ? '...' : ''}</div>
     ${article.body && article.body.length > 150 ? `<span class="toggle-body" onclick="toggleBody(${article.id})">Show more</span>` : ''}
@@ -1424,6 +1535,7 @@ function renderIssues(container) {
 
 // ---- Helpers ----
 function searchPerson(name) {
+  clearArticleHash();
   document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
   document.querySelector('[data-view="search"]').classList.add('active');
   personFilter = name;
@@ -1435,6 +1547,7 @@ function searchPerson(name) {
 }
 
 function searchTopic(name) {
+  clearArticleHash();
   document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
   document.querySelector('[data-view="search"]').classList.add('active');
   topicFilter = name;
@@ -1446,6 +1559,7 @@ function searchTopic(name) {
 }
 
 function searchByIssue(issueNums) {
+  clearArticleHash();
   document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'));
   document.querySelector('[data-view="search"]').classList.add('active');
   currentView = 'search';
@@ -1521,6 +1635,13 @@ function debounce(fn, ms) {
   let timer;
   return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
 }
+
+// React to hash changes (back/forward, shared links pasted mid-session).
+window.addEventListener('hashchange', () => {
+  const m = location.hash.match(/^#article=(\d+)/);
+  if (m) showArticle(parseInt(m[1], 10));
+  else if (currentView === 'article') navTo('search');
+});
 
 // ---- Init ----
 loadData();
